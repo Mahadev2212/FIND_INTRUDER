@@ -12,14 +12,15 @@ from pathlib import Path
 from typing import List
 
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from app.db import StorageUnavailable, make_store
 from app.schemas import AnalysisResponse, SimulateRequest
 from engine.parsers import decode_upload
 from engine.pipeline import run_analysis, simulate as run_simulation
+from engine.report import incident_markdown
 
 log = logging.getLogger("chaintrace")
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
@@ -132,6 +133,18 @@ def get_incident_detail(analysis_id: str, incident_id: str):
     """Full incident with story, alerts and evidence raw lines."""
     _found(_read(store.exists, analysis_id) or None)
     return _found(_read(store.incident_detail, analysis_id, incident_id), "Incident")
+
+
+@app.get("/api/analyses/{analysis_id}/incidents/{incident_id}/report")
+def get_incident_report(analysis_id: str, incident_id: str, format: str = Query("md", pattern="^(md|json)$")):
+    """Downloadable incident report: Markdown (story, timeline, evidence) or the full JSON."""
+    _found(_read(store.exists, analysis_id) or None)
+    detail = _found(_read(store.incident_detail, analysis_id, incident_id), "Incident")
+    filename = f"chaintrace-{incident_id}"
+    if format == "json":
+        return JSONResponse(detail, headers={"Content-Disposition": f'attachment; filename="{filename}.json"'})
+    return Response(incident_markdown(analysis_id, detail), media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}.md"'})
 
 
 @app.get("/api/analyses/{analysis_id}/entities")
