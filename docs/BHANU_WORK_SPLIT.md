@@ -80,3 +80,30 @@ A3: Run `pytest tests -v` and write docs/testing.md: a table of T1-T19 (ID, test
 Before pushing: cd backend && venv\Scripts\python -m pytest tests -q (all must pass).
 Commit and push ONLY to your branch: git push -u origin bhanu-antigravity
 ```
+
+---
+
+# Round 2 (after merging round 1 into `bhanu`)
+
+| | Claude | Antigravity |
+|---|---|---|
+| Folder | `algohack/FIND_INTRUDER_claude` | `algohack/FIND_INTRUDER_antigravity` |
+| Branch | `bhanu-claude-r2` | `bhanu-antigravity-r2` |
+
+**Claude: C4–C6**
+- C4: Evaluation reports critical false positives on a baseline-only run (same seed), as the PRD defines it.
+- C5: `DELETE /api/analyses/{id}` + automatic retention (keep newest N analyses) for small free-tier databases.
+- C6: `docs/api.md`, the exact API reference for Mahadev's integration.
+
+Files (Claude only): `backend/engine/evaluate.py`, `backend/engine/pipeline.py`, `backend/app/main.py`,
+`backend/app/db.py`, `backend/config.yaml`, `backend/tests/test_eval_baseline.py` (new),
+`backend/tests/test_delete.py` (new), `docs/api.md` (new).
+
+**Antigravity: A4–A6**
+- A4: Frontend contract check: real API responses vs `frontend/src/mocks/*.json`, with a report for Mahadev.
+- A5: Demo sample log files for live uploads (clean, messy, IPv6, JSON-lines), each with a test.
+- A6: Performance benchmark (10k → 200k lines) + `docs/performance.md`.
+
+Files (Antigravity only): `backend/tests/test_contract.py` (new), `docs/contract_report.md` (new),
+`backend/samples/` (new folder), `backend/scripts/make_samples.py` (new), `backend/tests/test_samples.py` (new),
+`backend/scripts/benchmark.py` (new), `docs/performance.md` (new).
