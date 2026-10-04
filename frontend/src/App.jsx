@@ -4,11 +4,11 @@ import {
   CheckCircle2, AlertTriangle, AlertCircle, ArrowRight, 
   Terminal, Server, Play, Upload, RefreshCw, ChevronRight, 
   Search, Filter, ExternalLink, Database, Sparkles, Layers,
-  Clock, Shield, Eye
+  Clock, Shield, Eye, Copy, Check, TerminalSquare, Compass
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, CartesianGrid 
+  CartesianGrid 
 } from 'recharts';
 
 import mockSummary from './mocks/summary.json';
@@ -36,6 +36,7 @@ export default function App() {
   const [evaluation, setEvaluation] = useState(mockEvaluation);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [copiedText, setCopiedText] = useState(null);
 
   // Simulation controls
   const [selectedScenarios, setSelectedScenarios] = useState({
@@ -51,6 +52,13 @@ export default function App() {
   const [activeEvidenceRule, setActiveEvidenceRule] = useState(null);
   const [entityFilter, setEntityFilter] = useState('all');
   const [entitySearch, setEntitySearch] = useState('');
+
+  // Copy helper
+  const handleCopy = (text) => {
+    navigator.clipboard?.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => setCopiedText(null), 1800);
+  };
 
   // 1. Check backend health on mount
   useEffect(() => {
@@ -73,7 +81,7 @@ export default function App() {
   // 2. Fetch analyses list
   useEffect(() => {
     if (useMocks || !backendAlive) {
-      setAnalyses([{ id: 'mock-1', source: 'simulation', stats: mockSummary.stats, created_at: new Date().toISOString() }]);
+      setAnalyses([{ id: 'demo-simulation', source: 'simulation', stats: mockSummary.stats, created_at: new Date().toISOString() }]);
       return;
     }
     fetchAnalyses();
@@ -112,11 +120,9 @@ export default function App() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      // Summary
       const sumRes = await fetch(`${API_BASE}/analyses/${id}/summary`);
       if (sumRes.ok) setSummary(await sumRes.json());
 
-      // Incidents
       const incRes = await fetch(`${API_BASE}/analyses/${id}/incidents`);
       if (incRes.ok) {
         const incData = await incRes.json();
@@ -126,11 +132,9 @@ export default function App() {
         }
       }
 
-      // Entities
       const entRes = await fetch(`${API_BASE}/analyses/${id}/entities`);
       if (entRes.ok) setEntities(await entRes.json());
 
-      // Evaluation
       const evalRes = await fetch(`${API_BASE}/analyses/${id}/evaluation`);
       if (evalRes.ok) setEvaluation(await evalRes.json());
       else setEvaluation(null);
@@ -230,48 +234,53 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="grid-bg" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
-      {/* ─── Top Navbar ─────────────────────────────────────────────────────────── */}
+      {/* ─── Top Utility / Workspace Header ───────────────────────────────────── */}
       <header style={{
-        background: 'rgba(11, 15, 29, 0.85)',
-        backdropFilter: 'blur(12px)',
+        background: 'var(--bg-surface)',
         borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        padding: '0 24px',
+        padding: '0 28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: '68px',
+        height: '62px',
       }}>
+        {/* Left: Brand + Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-          {/* Brand */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => setActiveTab('overview')}>
+          {/* Logo & Product Badge */}
+          <div 
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} 
+            onClick={() => setActiveTab('overview')}
+          >
             <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #00f2fe, #4facfe)',
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: '#10b981',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 16px rgba(0, 242, 254, 0.4)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
             }}>
-              <ShieldAlert size={22} color="#050b14" />
+              <ShieldAlert size={18} color="#041a12" strokeWidth={2.4} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: '1.25rem', letterSpacing: '-0.02em', background: 'linear-gradient(to right, #ffffff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <div style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.1 }}>
                 ChainTrace
               </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--accent-cyan)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                ALG-CYBER-01 Intruder Detection
+              <div style={{ fontSize: '0.66rem', color: 'var(--accent-primary)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                ALG-CYBER-01
               </div>
             </div>
           </div>
 
-          {/* Nav Tabs */}
+          <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }} />
+
+          {/* Clean Human-Crafted Tabs */}
           <nav style={{ display: 'flex', gap: '4px' }}>
             {[
               { id: 'overview', label: 'Overview', icon: Activity },
@@ -289,27 +298,29 @@ export default function App() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: isActive ? 'rgba(0, 242, 254, 0.12)' : 'transparent',
-                    color: isActive ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                    gap: '7px',
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid',
+                    borderColor: isActive ? 'var(--border-medium)' : 'transparent',
+                    background: isActive ? 'var(--bg-surface-raised)' : 'transparent',
+                    color: isActive ? '#fff' : 'var(--text-muted)',
                     fontWeight: isActive ? 600 : 500,
-                    fontSize: '0.88rem',
+                    fontSize: '0.84rem',
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.15s',
                   }}
                 >
-                  <Icon size={16} />
+                  <Icon size={15} color={isActive ? 'var(--accent-primary)' : 'var(--text-faint)'} />
                   <span>{tab.label}</span>
                   {tab.count !== undefined && (
                     <span style={{
-                      fontSize: '0.72rem',
-                      padding: '2px 7px',
-                      borderRadius: '12px',
-                      background: isActive ? 'rgba(0, 242, 254, 0.25)' : 'rgba(255, 255, 255, 0.08)',
-                      color: isActive ? '#fff' : 'var(--text-muted)'
+                      fontSize: '0.7rem',
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      background: isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      color: isActive ? 'var(--accent-primary)' : 'var(--text-faint)',
+                      fontWeight: 700,
                     }}>
                       {tab.count}
                     </span>
@@ -320,23 +331,24 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Right status controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Analysis selector */}
+        {/* Right: Analysis Selector & API Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {/* Active Dataset Dropdown */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Database size={15} color="var(--text-muted)" />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-faint)', fontWeight: 600, textTransform: 'uppercase' }}>Dataset:</span>
             <select
               value={analysisId}
               onChange={(e) => setAnalysisId(e.target.value)}
               style={{
                 background: 'var(--bg-input)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-primary)',
-                padding: '6px 12px',
+                border: '1px solid var(--border-medium)',
+                color: 'var(--text-main)',
+                padding: '5px 10px',
                 borderRadius: '6px',
-                fontSize: '0.82rem',
+                fontSize: '0.8rem',
                 cursor: 'pointer',
                 outline: 'none',
+                fontFamily: 'var(--font-mono)',
               }}
             >
               {analyses.map(a => (
@@ -347,54 +359,54 @@ export default function App() {
             </select>
           </div>
 
-          {/* Backend Status indicator */}
+          {/* Connection Status Badge */}
           <div 
             onClick={() => setUseMocks(!useMocks)}
             title="Click to toggle between Live API and Mocks"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              padding: '6px 12px',
+              gap: '6px',
+              padding: '4px 10px',
               borderRadius: '20px',
-              background: (backendAlive && !useMocks) ? 'rgba(0, 230, 153, 0.12)' : 'rgba(255, 140, 0, 0.15)',
-              border: `1px solid ${(backendAlive && !useMocks) ? 'rgba(0, 230, 153, 0.3)' : 'rgba(255, 140, 0, 0.3)'}`,
+              background: (backendAlive && !useMocks) ? 'var(--sev-low-bg)' : 'var(--sev-high-bg)',
+              border: `1px solid ${(backendAlive && !useMocks) ? 'var(--sev-low-border)' : 'var(--sev-high-border)'}`,
               cursor: 'pointer',
-              fontSize: '0.78rem',
-              fontWeight: 600,
+              fontSize: '0.74rem',
+              fontWeight: 700,
             }}
           >
             <span style={{
-              width: '8px',
-              height: '8px',
+              width: '6px',
+              height: '6px',
               borderRadius: '50%',
-              background: (backendAlive && !useMocks) ? '#00e699' : '#ff8c00',
-              boxShadow: `0 0 8px ${(backendAlive && !useMocks) ? '#00e699' : '#ff8c00'}`,
+              background: (backendAlive && !useMocks) ? '#10b981' : '#f97316',
             }} />
-            <span style={{ color: (backendAlive && !useMocks) ? '#00e699' : '#ff8c00' }}>
-              {(backendAlive && !useMocks) ? 'Live API Connected' : (useMocks ? 'Mock Mode' : 'Backend Offline')}
+            <span style={{ color: (backendAlive && !useMocks) ? '#10b981' : '#f97316' }}>
+              {(backendAlive && !useMocks) ? 'Live API (8000)' : (useMocks ? 'Offline Mocks' : 'API Offline')}
             </span>
           </div>
         </div>
       </header>
 
-      {/* ─── Main Content Container ────────────────────────────────────────────── */}
-      <main style={{ flex: 1, padding: '28px 36px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+      {/* ─── Main Content Canvas ──────────────────────────────────────────────── */}
+      <main style={{ flex: 1, padding: '24px 32px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
         
+        {/* Error notification banner */}
         {errorMsg && (
           <div style={{
-            padding: '12px 18px',
-            marginBottom: '20px',
-            borderRadius: '8px',
-            background: 'var(--risk-critical-bg)',
-            border: '1px solid rgba(255, 51, 102, 0.4)',
-            color: 'var(--risk-critical)',
+            padding: '10px 16px',
+            marginBottom: '16px',
+            borderRadius: '6px',
+            background: 'var(--sev-critical-bg)',
+            border: '1px solid var(--sev-critical-border)',
+            color: 'var(--sev-critical)',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.9rem',
+            gap: '8px',
+            fontSize: '0.85rem',
           }}>
-            <AlertTriangle size={18} />
+            <AlertTriangle size={16} />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -402,64 +414,58 @@ export default function App() {
         {/* ─── TAB: OVERVIEW ────────────────────────────────────────────────────── */}
         {activeTab === 'overview' && (
           <div>
-            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            {/* Top Overview Bar */}
+            <div style={{ marginBottom: '22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>
-                  Intrusion Detection Overview
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>
+                  Security Analysis Dashboard
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-                  Analysis ID: <code style={{ color: 'var(--accent-cyan)' }}>{analysisId}</code> · Source: {summary?.source}
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '3px' }}>
+                  Correlating noisy log lines into coherent attack stories · Dataset: <code style={{ color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>{analysisId}</code>
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button 
-                  className="btn btn-outline" 
+                  className="btn btn-secondary" 
                   onClick={() => { checkHealth(); loadAnalysisData(analysisId); }}
-                  title="Refresh Data"
+                  title="Reload dataset"
                 >
-                  <RefreshCw size={15} /> Refresh
+                  <RefreshCw size={14} /> Refresh
                 </button>
                 <button className="btn btn-primary" onClick={() => setActiveTab('upload')}>
-                  <Play size={15} /> Run Attack Simulation
+                  <Play size={14} /> New Simulation
                 </button>
               </div>
             </div>
 
-            {/* Stat Cards Grid */}
+            {/* Metric Cards Grid */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-              gap: '16px',
-              marginBottom: '28px',
+              gap: '14px',
+              marginBottom: '22px',
             }}>
               {[
-                { label: 'Lines Parsed', val: summary?.stats?.parsed || 0, sub: `${summary?.stats?.skipped || 0} skipped (never crashes)`, color: '#4facfe', icon: FileText },
-                { label: 'Events Processed', val: summary?.stats?.events || 0, sub: 'Auth + Web Combined', color: '#00f2fe', icon: Activity },
-                { label: 'Alerts Triggered', val: summary?.stats?.alerts || 0, sub: 'Rules R1–R11 (no LLM)', color: '#ffcc00', icon: AlertCircle },
-                { label: 'Correlated Incidents', val: summary?.stats?.incidents || 0, sub: 'Multi-stage attacks', color: '#ff3366', icon: ShieldAlert },
-                { label: 'Critical False Positives', val: evaluation?.critical_false_positives ?? 0, sub: 'Tuned for SOC efficiency', color: '#00e699', icon: CheckCircle2 },
+                { label: 'Lines Ingested', val: summary?.stats?.parsed || 0, sub: `${summary?.stats?.skipped || 0} malformed skipped`, icon: FileText, color: '#10b981' },
+                { label: 'Events Normalized', val: summary?.stats?.events || 0, sub: 'Auth.log + Access.log', icon: Activity, color: '#34d399' },
+                { label: 'Rule Alerts', val: summary?.stats?.alerts || 0, sub: 'Rules R1–R11 triggered', icon: AlertCircle, color: '#eab308' },
+                { label: 'Correlated Attacks', val: summary?.stats?.incidents || 0, sub: 'Multi-stage incidents', icon: ShieldAlert, color: '#f43f5e' },
+                { label: 'Critical False Pos.', val: evaluation?.critical_false_positives ?? 0, sub: 'SOC noise reduction', icon: CheckCircle2, color: '#10b981' },
               ].map((card, i) => {
                 const Icon = card.icon;
                 return (
-                  <div key={i} className="glass-panel" style={{ padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  <div key={i} className="card" style={{ padding: '16px 18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                         {card.label}
                       </span>
-                      <div style={{
-                        padding: '6px',
-                        borderRadius: '8px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        color: card.color
-                      }}>
-                        <Icon size={18} />
-                      </div>
+                      <Icon size={16} color={card.color} />
                     </div>
-                    <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
                       {card.val.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-faint)', marginTop: '6px' }}>
                       {card.sub}
                     </div>
                   </div>
@@ -467,78 +473,91 @@ export default function App() {
               })}
             </div>
 
-            {/* Middle Row: Events-Over-Time Chart + Top Entities */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '28px' }}>
-              {/* Chart */}
-              <div className="glass-panel" style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            {/* Middle Section: Events Timeline + Top Risky Entities */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '22px' }}>
+              {/* Timeline Chart */}
+              <div className="card" style={{ padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>Events Over Time</h3>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Event distribution across timestamps showing burst attacks</p>
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Events Over Time</h3>
+                    <p style={{ fontSize: '0.76rem', color: 'var(--text-faint)' }}>Normalized event frequency highlighting attack bursts</p>
                   </div>
-                  <span className="badge badge-low">Normalized</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', background: 'var(--accent-primary-subtle)' }}>
+                    Hourly Distribution
+                  </span>
                 </div>
                 
-                <div style={{ height: '240px', width: '100%' }}>
+                <div style={{ height: '220px', width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={summary?.events_over_time || []}>
                       <defs>
-                        <linearGradient id="eventColor" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#00f2fe" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#00f2fe" stopOpacity={0.0}/>
+                        <linearGradient id="emeraldGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.35}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="time" stroke="#64748b" fontSize={11} tickFormatter={(t) => t.slice(11, 16)} />
-                      <YAxis stroke="#64748b" fontSize={11} />
-                      <Tooltip contentStyle={{ background: '#0f1424', border: '1px solid var(--border-subtle)', borderRadius: '8px', fontSize: '12px' }} />
-                      <Area type="monotone" dataKey="count" stroke="#00f2fe" strokeWidth={2} fillOpacity={1} fill="url(#eventColor)" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2636" vertical={false} />
+                      <XAxis dataKey="time" stroke="#475569" fontSize={11} tickFormatter={(t) => t.slice(11, 16)} />
+                      <YAxis stroke="#475569" fontSize={11} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          background: '#14171f', 
+                          border: '1px solid #333c52', 
+                          borderRadius: '6px', 
+                          fontSize: '12px',
+                          color: '#fff'
+                        }} 
+                      />
+                      <Area type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#emeraldGradient)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Top Risky Entities */}
-              <div className="glass-panel" style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>Top Risky Entities</h3>
+              {/* Riskiest Entities */}
+              <div className="card" style={{ padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Top Risky Entities</h3>
+                    <p style={{ fontSize: '0.76rem', color: 'var(--text-faint)' }}>Highest accumulated risk</p>
+                  </div>
                   <button 
                     onClick={() => setActiveTab('entities')} 
-                    style={{ background: 'transparent', border: 'none', color: 'var(--accent-cyan)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--accent-primary)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
                   >
-                    View All <ArrowRight size={13} />
+                    View All <ArrowRight size={12} />
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {(summary?.top_entities || entities?.slice(0, 5) || []).map((ent, i) => (
                     <div key={i} style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      background: 'rgba(255,255,255,0.03)',
-                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      background: 'rgba(255,255,255,0.02)',
+                      borderRadius: '6px',
                       border: '1px solid var(--border-subtle)',
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{
-                          padding: '4px 6px',
-                          borderRadius: '4px',
-                          fontSize: '0.68rem',
+                          padding: '2px 5px',
+                          borderRadius: '3px',
+                          fontSize: '0.64rem',
                           fontWeight: 700,
-                          background: ent.type === 'ip' ? 'rgba(79, 172, 254, 0.2)' : 'rgba(138, 43, 226, 0.2)',
-                          color: ent.type === 'ip' ? '#4facfe' : '#c084fc',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          color: '#cbd5e1',
                           textTransform: 'uppercase'
                         }}>
                           {ent.type}
                         </span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: 600, color: '#fff' }}>
                           {ent.value}
                         </span>
                       </div>
                       
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span className={`badge badge-${ent.level?.toLowerCase() || 'medium'}`}>
                           {ent.risk_score}
                         </span>
@@ -549,13 +568,13 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quick Attack Story Showcase */}
+            {/* Featured Critical Incident */}
             {incidents?.length > 0 && (
-              <div className="glass-panel" style={{ padding: '24px', borderLeft: '4px solid var(--risk-critical)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div className="card" style={{ padding: '22px', borderLeft: '4px solid var(--sev-critical)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="badge badge-critical">Highest Priority Attack</span>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
                       {incidents[0].title}
                     </h3>
                   </div>
@@ -566,15 +585,15 @@ export default function App() {
                       setActiveTab('incident-detail');
                     }}
                   >
-                    Examine Story & Evidence <ArrowRight size={15} />
+                    Examine Story & Evidence <ArrowRight size={14} />
                   </button>
                 </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.6 }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.5 }}>
                   {incidents[0].summary}
                 </p>
                 <div style={{ marginTop: '12px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {incidents[0].stages?.map((stage, i) => (
-                    <span key={i} className="stage-chip">
+                    <span key={i} className="stage-tag">
                       {stage}
                     </span>
                   ))}
@@ -587,32 +606,32 @@ export default function App() {
         {/* ─── TAB: INCIDENTS LIST ──────────────────────────────────────────────── */}
         {activeTab === 'incidents' && (
           <div>
-            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>Correlated Incidents</h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-                  Ranked by risk score using union-find graph correlation & IP-to-User pivot analysis.
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Correlated Incidents</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '2px' }}>
+                  Ranked by risk score · Connected via graph union-find & IP-to-User pivot analysis.
                 </p>
               </div>
-              <span className="badge badge-critical" style={{ fontSize: '0.85rem', padding: '6px 14px' }}>
-                {incidents?.length} Incidents Discovered
+              <span className="badge badge-critical">
+                {incidents?.length} Incidents Found
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {incidents?.map((inc) => {
                 const levelClass = inc.level?.toLowerCase() || 'medium';
                 return (
                   <div 
                     key={inc.id}
-                    className="glass-panel"
+                    className="card card-interactive"
                     style={{
-                      padding: '22px 26px',
+                      padding: '18px 22px',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '14px',
+                      gap: '12px',
                       cursor: 'pointer',
-                      borderLeft: `4px solid var(--risk-${levelClass})`,
+                      borderLeft: `3px solid var(--sev-${levelClass})`,
                     }}
                     onClick={() => {
                       setSelectedIncidentId(inc.id);
@@ -620,51 +639,51 @@ export default function App() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span className={`badge badge-${levelClass}`}>
                           {inc.level} · {inc.risk_score}
                         </span>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
                           {inc.title}
                         </h3>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>
                           #{inc.id}
                         </span>
                       </div>
 
                       <button 
-                        className="btn btn-outline" 
-                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                        className="btn btn-secondary" 
+                        style={{ padding: '4px 10px', fontSize: '0.76rem' }}
                       >
-                        Inspect Attack Story <ChevronRight size={14} />
+                        Inspect Story <ChevronRight size={13} />
                       </button>
                     </div>
 
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.86rem', lineHeight: 1.5 }}>
                       {inc.summary}
                     </p>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
                       {/* Stages */}
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginRight: '4px' }}>Stages:</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-faint)', marginRight: '2px' }}>Stages:</span>
                         {inc.stages?.map((stage, idx) => (
-                          <span key={idx} className="stage-chip">
+                          <span key={idx} className="stage-tag">
                             {stage}
                           </span>
                         ))}
                       </div>
 
                       {/* Entities Involved */}
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Entities:</span>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-faint)' }}>Pivot Entities:</span>
                         {inc.entities?.ips?.map(ip => (
-                          <span key={ip} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', background: 'rgba(79, 172, 254, 0.15)', color: '#4facfe', padding: '2px 8px', borderRadius: '4px' }}>
+                          <span key={ip} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>
                             {ip}
                           </span>
                         ))}
                         {inc.entities?.users?.map(u => (
-                          <span key={u} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', background: 'rgba(192, 132, 252, 0.15)', color: '#c084fc', padding: '2px 8px', borderRadius: '4px' }}>
+                          <span key={u} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', background: 'var(--accent-warm-subtle)', color: 'var(--accent-warm)', padding: '1px 6px', borderRadius: '4px' }}>
                             @{u}
                           </span>
                         ))}
@@ -680,50 +699,59 @@ export default function App() {
         {/* ─── TAB: INCIDENT DETAIL (THE CENTERPIECE) ─────────────────────────── */}
         {activeTab === 'incident-detail' && incidentDetail && (
           <div>
-            <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button 
                 onClick={() => setActiveTab('incidents')}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem' }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
               >
-                ← Back to Incidents
+                ← Back to Incident List
               </button>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => handleCopy(incidentDetail.id)}
+                  style={{ fontSize: '0.76rem', padding: '4px 10px' }}
+                >
+                  {copiedText === incidentDetail.id ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
+                  <span>{copiedText === incidentDetail.id ? 'Copied ID' : 'Copy Incident ID'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Incident Header Card */}
-            <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div className="card" style={{ padding: '24px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                     <span className={`badge badge-${incidentDetail.level?.toLowerCase() || 'critical'}`}>
-                      {incidentDetail.level} RISK
+                      {incidentDetail.level} SEVERITY
                     </span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>
                       Incident #{incidentDetail.id}
                     </span>
                   </div>
-                  <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff' }}>
+                  <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff' }}>
                     {incidentDetail.title}
                   </h1>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--risk-critical)', lineHeight: 1 }}>
-                      {incidentDetail.risk_score}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                      Risk Score / 100
-                    </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--sev-critical)', lineHeight: 1 }}>
+                    {incidentDetail.risk_score}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', textTransform: 'uppercase' }}>
+                    Cumulative Risk Score
                   </div>
                 </div>
               </div>
 
-              {/* Kill Chain Stage Progress Bar */}
-              <div style={{ marginTop: '24px' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '10px' }}>
-                  MITRE ATT&CK Kill-Chain Progression
+              {/* MITRE ATT&CK Kill-Chain Progression */}
+              <div style={{ marginTop: '20px' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  MITRE ATT&CK Kill-Chain Stage Progression
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
                   {[
                     "Reconnaissance",
                     "Credential Access",
@@ -735,15 +763,15 @@ export default function App() {
                     const isPresent = incidentDetail.stages?.includes(stage);
                     return (
                       <div key={idx} style={{
-                        padding: '10px 8px',
-                        borderRadius: '6px',
+                        padding: '8px 6px',
+                        borderRadius: '4px',
                         textAlign: 'center',
-                        background: isPresent ? 'rgba(0, 242, 254, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                        border: `1px solid ${isPresent ? 'var(--accent-cyan)' : 'var(--border-subtle)'}`,
-                        color: isPresent ? '#fff' : 'var(--text-muted)',
-                        transition: 'all 0.2s',
+                        background: isPresent ? 'var(--accent-primary-subtle)' : 'rgba(255, 255, 255, 0.02)',
+                        border: `1px solid ${isPresent ? 'var(--accent-primary-border)' : 'var(--border-subtle)'}`,
+                        color: isPresent ? '#fff' : 'var(--text-faint)',
+                        transition: 'all 0.15s',
                       }}>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700 }}>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 700 }}>
                           {stage}
                         </div>
                       </div>
@@ -755,21 +783,21 @@ export default function App() {
               {/* Recommendation Banner */}
               {incidentDetail.recommendation && (
                 <div style={{
-                  marginTop: '24px',
-                  padding: '16px 20px',
-                  borderRadius: '8px',
-                  background: 'rgba(255, 204, 0, 0.08)',
-                  border: '1px solid rgba(255, 204, 0, 0.3)',
+                  marginTop: '20px',
+                  padding: '14px 18px',
+                  borderRadius: '6px',
+                  background: 'var(--accent-warm-subtle)',
+                  border: '1px solid var(--accent-warm-border)',
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '12px',
+                  gap: '10px',
                 }}>
-                  <Shield size={20} color="#ffcc00" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <Shield size={18} color="var(--accent-warm)" style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div>
-                    <div style={{ fontWeight: 700, color: '#ffcc00', fontSize: '0.88rem', marginBottom: '4px' }}>
-                      Recommended SOC Response
+                    <div style={{ fontWeight: 700, color: 'var(--accent-warm)', fontSize: '0.84rem', marginBottom: '3px' }}>
+                      Recommended Action for Security Analysts
                     </div>
-                    <div style={{ color: '#f1f5f9', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                    <div style={{ color: '#f8fafc', fontSize: '0.85rem', lineHeight: 1.5 }}>
                       {incidentDetail.recommendation}
                     </div>
                   </div>
@@ -777,17 +805,17 @@ export default function App() {
               )}
             </div>
 
-            {/* Attack Story & Evidence Split View */}
-            <div style={{ display: 'grid', gridTemplateColumns: activeEvidenceRule ? '1fr 1fr' : '1fr', gap: '24px' }}>
+            {/* Narrative Story & Evidence Side-by-Side */}
+            <div style={{ display: 'grid', gridTemplateColumns: activeEvidenceRule ? '1fr 1fr' : '1fr', gap: '20px' }}>
               
-              {/* Chronological Attack Story Steps */}
-              <div className="glass-panel" style={{ padding: '28px' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Layers size={20} color="var(--accent-cyan)" />
+              {/* Chronological Narrative */}
+              <div className="card" style={{ padding: '24px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Layers size={18} color="var(--accent-primary)" />
                   Chronological Attack Narrative
                 </h3>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', position: 'relative' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {incidentDetail.story?.map((step, idx) => {
                     const matchedAlert = incidentDetail.alerts?.find(a => a.id === step.alert_id);
                     const isSelected = activeEvidenceRule?.alert_id === step.alert_id;
@@ -796,12 +824,12 @@ export default function App() {
                       <div 
                         key={idx}
                         style={{
-                          padding: '18px 20px',
-                          borderRadius: '10px',
-                          background: isSelected ? 'rgba(0, 242, 254, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                          border: `1px solid ${isSelected ? 'var(--accent-cyan)' : 'var(--border-subtle)'}`,
+                          padding: '16px 18px',
+                          borderRadius: '8px',
+                          background: isSelected ? 'var(--bg-surface-raised)' : 'rgba(255, 255, 255, 0.02)',
+                          border: `1px solid ${isSelected ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
                           cursor: 'pointer',
-                          transition: 'all 0.2s',
+                          transition: 'all 0.15s',
                         }}
                         onClick={() => {
                           setActiveEvidenceRule({
@@ -816,38 +844,38 @@ export default function App() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{
-                              width: '24px',
-                              height: '24px',
+                              width: '22px',
+                              height: '22px',
                               borderRadius: '50%',
-                              background: 'rgba(0, 242, 254, 0.2)',
-                              color: 'var(--accent-cyan)',
+                              background: 'var(--accent-primary-subtle)',
+                              color: 'var(--accent-primary)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '0.75rem',
-                              fontWeight: 700
+                              fontSize: '0.72rem',
+                              fontWeight: 800
                             }}>
                               {idx + 1}
                             </span>
-                            <span className="stage-chip" style={{ background: 'rgba(0, 242, 254, 0.1)', color: 'var(--accent-cyan)' }}>
+                            <span className="stage-tag" style={{ color: 'var(--accent-primary)', background: 'var(--accent-primary-subtle)' }}>
                               {step.stage}
                             </span>
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '0.74rem', color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Clock size={12} /> {new Date(step.ts).toLocaleTimeString()}
                             </span>
                             <button 
-                              className="btn btn-outline" 
-                              style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                              className="btn btn-secondary" 
+                              style={{ padding: '2px 8px', fontSize: '0.72rem' }}
                             >
-                              <Eye size={12} /> View Raw Evidence
+                              <Eye size={12} /> View Proof
                             </button>
                           </div>
                         </div>
 
-                        <p style={{ color: '#fff', fontSize: '0.92rem', lineHeight: 1.6 }}>
+                        <p style={{ color: '#fff', fontSize: '0.88rem', lineHeight: 1.55 }}>
                           {step.text}
                         </p>
                       </div>
@@ -856,16 +884,16 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Evidence Drawer Panel */}
+              {/* Evidence Inspector Drawer */}
               {activeEvidenceRule && (
-                <div className="glass-panel" style={{ padding: '28px', borderLeft: '4px solid var(--accent-cyan)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div className="card" style={{ padding: '24px', borderLeft: '3px solid var(--accent-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
                     <div>
-                      <span className="badge badge-low" style={{ marginBottom: '6px' }}>
-                        Step {activeEvidenceRule.stepIndex} Evidence
+                      <span className="badge badge-low" style={{ marginBottom: '4px' }}>
+                        Step {activeEvidenceRule.stepIndex} Proof
                       </span>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
-                        Raw Log Evidence & Detection Proof
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>
+                        Raw Log Evidence & Rule Inspection
                       </h3>
                     </div>
                     <button 
@@ -876,26 +904,27 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Rule details */}
+                  {/* Triggered Rule Card */}
                   {activeEvidenceRule.alert && (
                     <div style={{
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.04)',
-                      marginBottom: '18px',
-                      fontSize: '0.85rem'
+                      padding: '12px 14px',
+                      borderRadius: '6px',
+                      background: 'var(--bg-canvas)',
+                      border: '1px solid var(--border-subtle)',
+                      marginBottom: '16px',
+                      fontSize: '0.82rem'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Triggered Rule:</span>
-                        <strong style={{ color: 'var(--accent-cyan)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ color: 'var(--text-faint)' }}>Detection Rule:</span>
+                        <strong style={{ color: 'var(--accent-primary)' }}>
                           [{activeEvidenceRule.alert.rule_id}] {activeEvidenceRule.alert.rule_name}
                         </strong>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>MITRE ATT&CK:</span>
-                        <span>{activeEvidenceRule.alert.mitre?.tactic} ({activeEvidenceRule.alert.mitre?.technique})</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ color: 'var(--text-faint)' }}>MITRE Reference:</span>
+                        <span style={{ color: '#fff' }}>{activeEvidenceRule.alert.mitre?.tactic} ({activeEvidenceRule.alert.mitre?.technique})</span>
                       </div>
-                      <div style={{ color: 'var(--text-secondary)', marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' }}>
+                      <div style={{ color: 'var(--text-muted)', marginTop: '8px', borderTop: '1px solid var(--border-subtle)', paddingTop: '6px' }}>
                         <strong>Reason:</strong> {activeEvidenceRule.alert.reason}
                       </div>
                     </div>
@@ -903,30 +932,33 @@ export default function App() {
 
                   {/* Monospace Raw Lines */}
                   <div>
-                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                      Exact Raw Log Lines (Monospace with Line Numbers)
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase' }}>
+                        Raw Monospace Log Lines
+                      </span>
                     </div>
+
                     <div style={{
-                      background: '#060911',
-                      borderRadius: '8px',
-                      padding: '14px',
+                      background: '#090b0e',
+                      borderRadius: '6px',
+                      padding: '12px',
                       border: '1px solid var(--border-subtle)',
-                      maxHeight: '400px',
+                      maxHeight: '360px',
                       overflowY: 'auto',
                     }}>
                       {(incidentDetail.evidence_lines || []).length > 0 ? (
                         incidentDetail.evidence_lines.map((ev, i) => (
-                          <div key={i} style={{ display: 'flex', gap: '12px', marginBottom: '8px', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
-                            <span style={{ color: 'var(--text-muted)', userSelect: 'none', minWidth: '40px', textAlign: 'right' }}>
+                          <div key={i} style={{ display: 'flex', gap: '10px', marginBottom: '6px', fontSize: '0.78rem', fontFamily: 'var(--font-mono)' }}>
+                            <span style={{ color: 'var(--text-faint)', userSelect: 'none', minWidth: '36px', textAlign: 'right' }}>
                               L{ev.line_no || i + 1}
                             </span>
-                            <span style={{ color: '#00e699', wordBreak: 'break-all' }}>
+                            <span style={{ color: '#a7f3d0', wordBreak: 'break-all' }}>
                               {ev.raw}
                             </span>
                           </div>
                         ))
                       ) : (
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        <div style={{ color: 'var(--text-faint)', fontSize: '0.8rem' }}>
                           Evidence lines recorded for alert {activeEvidenceRule.alert_id}
                         </div>
                       )}
@@ -941,19 +973,17 @@ export default function App() {
         {/* ─── TAB: ENTITIES ────────────────────────────────────────────────────── */}
         {activeTab === 'entities' && (
           <div>
-            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>Entity Risk Scoring</h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-                  Risk score = sum(alert points) × kill-chain stage multiplier (1.0× to 1.6×).
-                </p>
-              </div>
+            <div style={{ marginBottom: '20px' }}>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Entity Risk Scoring</h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '2px' }}>
+                Accumulated points with kill-chain multiplier (1.0× to 1.6×). Weak signals compound.
+              </p>
             </div>
 
             {/* Filter and Search Bar */}
-            <div className="glass-panel" style={{ padding: '16px 20px', marginBottom: '20px', display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div className="card" style={{ padding: '12px 16px', marginBottom: '16px', display: 'flex', gap: '14px', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                <Search size={16} color="var(--text-muted)" />
+                <Search size={15} color="var(--text-faint)" />
                 <input 
                   type="text"
                   placeholder="Search IP or username..."
@@ -965,23 +995,24 @@ export default function App() {
                     color: '#fff',
                     outline: 'none',
                     width: '100%',
-                    fontSize: '0.9rem',
+                    fontSize: '0.86rem',
                   }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 {['all', 'critical', 'high', 'medium', 'low'].map(lvl => (
                   <button
                     key={lvl}
                     onClick={() => setEntityFilter(lvl)}
                     style={{
-                      padding: '5px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-subtle)',
-                      background: entityFilter === lvl ? 'rgba(0, 242, 254, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                      color: entityFilter === lvl ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                      fontSize: '0.78rem',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      border: '1px solid',
+                      borderColor: entityFilter === lvl ? 'var(--border-medium)' : 'transparent',
+                      background: entityFilter === lvl ? 'var(--bg-surface-raised)' : 'transparent',
+                      color: entityFilter === lvl ? '#fff' : 'var(--text-muted)',
+                      fontSize: '0.76rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       textTransform: 'capitalize'
@@ -993,18 +1024,18 @@ export default function App() {
               </div>
             </div>
 
-            {/* Entities Table */}
-            <div className="glass-panel" style={{ overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+            {/* Table */}
+            <div className="card" style={{ overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.02)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>
-                    <th style={{ padding: '14px 20px' }}>Type</th>
-                    <th style={{ padding: '14px 20px' }}>Entity Value</th>
-                    <th style={{ padding: '14px 20px' }}>Risk Score</th>
-                    <th style={{ padding: '14px 20px' }}>Risk Level</th>
-                    <th style={{ padding: '14px 20px' }}>Alert Count</th>
-                    <th style={{ padding: '14px 20px' }}>First Seen</th>
-                    <th style={{ padding: '14px 20px' }}>Last Seen</th>
+                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-canvas)', color: 'var(--text-faint)', fontSize: '0.72rem', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '12px 18px' }}>Type</th>
+                    <th style={{ padding: '12px 18px' }}>Entity Value</th>
+                    <th style={{ padding: '12px 18px' }}>Risk Score</th>
+                    <th style={{ padding: '12px 18px' }}>Severity Level</th>
+                    <th style={{ padding: '12px 18px' }}>Alerts</th>
+                    <th style={{ padding: '12px 18px' }}>First Seen</th>
+                    <th style={{ padding: '12px 18px' }}>Last Seen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1012,47 +1043,47 @@ export default function App() {
                     ?.filter(e => entityFilter === 'all' || e.level?.toLowerCase() === entityFilter)
                     ?.filter(e => !entitySearch || e.value.toLowerCase().includes(entitySearch.toLowerCase()))
                     ?.map((ent, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.2s' }}>
-                        <td style={{ padding: '14px 20px' }}>
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '12px 18px' }}>
                           <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '4px',
-                            fontSize: '0.72rem',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            fontSize: '0.68rem',
                             fontWeight: 700,
-                            background: ent.type === 'ip' ? 'rgba(79, 172, 254, 0.15)' : 'rgba(192, 132, 252, 0.15)',
-                            color: ent.type === 'ip' ? '#4facfe' : '#c084fc',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            color: '#cbd5e1',
                             textTransform: 'uppercase'
                           }}>
                             {ent.type}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 20px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#fff' }}>
+                        <td style={{ padding: '12px 18px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#fff' }}>
                           {ent.value}
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <td style={{ padding: '12px 18px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontWeight: 800, color: '#fff' }}>{ent.risk_score}</span>
-                            <div style={{ width: '80px', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: '70px', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
                               <div style={{
                                 width: `${ent.risk_score}%`,
                                 height: '100%',
-                                background: ent.risk_score >= 80 ? 'var(--risk-critical)' : ent.risk_score >= 60 ? 'var(--risk-high)' : ent.risk_score >= 30 ? 'var(--risk-medium)' : 'var(--risk-low)'
+                                background: ent.risk_score >= 80 ? 'var(--sev-critical)' : ent.risk_score >= 60 ? 'var(--sev-high)' : ent.risk_score >= 30 ? 'var(--sev-medium)' : 'var(--sev-low)'
                               }} />
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '14px 20px' }}>
+                        <td style={{ padding: '12px 18px' }}>
                           <span className={`badge badge-${ent.level?.toLowerCase() || 'medium'}`}>
                             {ent.level}
                           </span>
                         </td>
-                        <td style={{ padding: '14px 20px', color: 'var(--text-secondary)' }}>
+                        <td style={{ padding: '12px 18px', color: 'var(--text-muted)' }}>
                           {ent.alert_count}
                         </td>
-                        <td style={{ padding: '14px 20px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        <td style={{ padding: '12px 18px', color: 'var(--text-faint)', fontSize: '0.78rem' }}>
                           {new Date(ent.first_seen).toLocaleTimeString()}
                         </td>
-                        <td style={{ padding: '14px 20px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        <td style={{ padding: '12px 18px', color: 'var(--text-faint)', fontSize: '0.78rem' }}>
                           {new Date(ent.last_seen).toLocaleTimeString()}
                         </td>
                       </tr>
@@ -1066,58 +1097,58 @@ export default function App() {
         {/* ─── TAB: EVALUATION (JUDGE-READY) ────────────────────────────────────── */}
         {activeTab === 'evaluation' && (
           <div>
-            <div style={{ marginBottom: '24px' }}>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>Evaluation Metrics & Proof</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-                Benchmark against simulator ground truth labels. Evaluates precision, recall, and detection of simulated attack campaigns.
+            <div style={{ marginBottom: '20px' }}>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Evaluation & Detection Benchmark</h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '2px' }}>
+                Ground-truth validation scored automatically against the attack simulator scenarios.
               </p>
             </div>
 
             {/* Headline Card */}
-            <div className="glass-panel" style={{
-              padding: '28px',
-              marginBottom: '28px',
-              background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.08), rgba(79, 172, 254, 0.04))',
-              border: '1px solid rgba(0, 242, 254, 0.3)'
+            <div className="card" style={{
+              padding: '24px',
+              marginBottom: '22px',
+              border: '1px solid var(--accent-primary-border)',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(245, 158, 11, 0.03))'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                  <span className="badge badge-low" style={{ marginBottom: '8px' }}>
-                    Headline Benchmark Metric
+                  <span className="badge badge-low" style={{ marginBottom: '6px' }}>
+                    Headline Competition Metric
                   </span>
-                  <div style={{ fontSize: '2.4rem', fontWeight: 800, color: '#fff' }}>
+                  <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff' }}>
                     {evaluation?.scenarios_detected ?? 4} / {evaluation?.scenarios_total ?? 5} Scenarios Detected
                   </div>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginTop: '6px' }}>
-                    Demonstrating multi-stage attack recognition across brute force, web recon, SQLi, and insider threats.
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '4px' }}>
+                    Successfully identifying brute force, spraying, web recon/exfiltration, and insider attacks.
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '24px' }}>
+                <div style={{ display: 'flex', gap: '20px' }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#10b981' }}>
                       {((evaluation?.precision ?? 0.286) * 100).toFixed(1)}%
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Precision</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', textTransform: 'uppercase' }}>Precision</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 800, color: '#00e699' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#34d399' }}>
                       {((evaluation?.recall ?? 0.727) * 100).toFixed(1)}%
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Recall</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', textTransform: 'uppercase' }}>Recall</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffcc00' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b' }}>
                       {evaluation?.critical_false_positives ?? 20}
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Critical FPs</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-faint)', textTransform: 'uppercase' }}>Critical FPs</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Per-Scenario Breakdown Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+            {/* Per-Scenario Breakdown */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '14px' }}>
               {(evaluation?.per_scenario || [
                 { scenario_id: 'S1', detected: true, expected_entities: ['185.220.101.7', 'deploy', 'sysupdate'], found_entities: ['185.220.101.7', 'deploy', 'sysupdate'] },
                 { scenario_id: 'S2', detected: true, expected_entities: ['45.33.10.8', 'user05'], found_entities: ['45.33.10.8', 'user05'] },
@@ -1127,49 +1158,49 @@ export default function App() {
               ]).map((sc) => {
                 const names = {
                   S1: 'SSH Compromise with Backdoor (S1)',
-                  S2: 'Password Spraying Campaign (S2)',
+                  S2: 'Password Spraying Attack (S2)',
                   S3: 'Web Recon -> SQLi -> Exfiltration (S3)',
                   S4: 'Low-and-Slow Subnet Distributed (S4)',
                   S5: 'Insider Off-Hours Sudo & Download (S5)',
                 };
 
                 return (
-                  <div key={sc.scenario_id} className="glass-panel" style={{ padding: '22px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h4 style={{ fontWeight: 700, color: '#fff', fontSize: '1rem' }}>
+                  <div key={sc.scenario_id} className="card" style={{ padding: '18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <h4 style={{ fontWeight: 700, color: '#fff', fontSize: '0.92rem' }}>
                         {names[sc.scenario_id] || sc.scenario_id}
                       </h4>
                       {sc.detected ? (
-                        <span className="badge badge-low" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <CheckCircle2 size={13} /> DETECTED
+                        <span className="badge badge-low" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <CheckCircle2 size={12} /> DETECTED
                         </span>
                       ) : (
-                        <span className="badge badge-critical" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <AlertTriangle size={13} /> MISSED
+                        <span className="badge badge-critical" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <AlertTriangle size={12} /> MISSED
                         </span>
                       )}
                     </div>
 
-                    <div style={{ fontSize: '0.82rem', marginTop: '10px' }}>
-                      <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>Expected Entities:</div>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                    <div style={{ fontSize: '0.78rem', marginTop: '8px' }}>
+                      <div style={{ color: 'var(--text-faint)', marginBottom: '3px' }}>Expected Entities:</div>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
                         {sc.expected_entities?.map((e, idx) => (
-                          <span key={idx} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '4px' }}>
+                          <span key={idx} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '3px' }}>
                             {e}
                           </span>
                         ))}
                       </div>
 
-                      <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>Captured Entities:</div>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ color: 'var(--text-faint)', marginBottom: '3px' }}>Captured Entities:</div>
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                         {sc.found_entities?.length > 0 ? (
                           sc.found_entities.map((e, idx) => (
-                            <span key={idx} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', background: 'rgba(0, 242, 254, 0.15)', color: 'var(--accent-cyan)', padding: '2px 6px', borderRadius: '4px' }}>
+                            <span key={idx} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)', padding: '1px 5px', borderRadius: '3px' }}>
                               ✓ {e}
                             </span>
                           ))
                         ) : (
-                          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.75rem' }}>None captured</span>
+                          <span style={{ color: 'var(--text-faint)', fontStyle: 'italic', fontSize: '0.72rem' }}>None captured</span>
                         )}
                       </div>
                     </div>
@@ -1182,27 +1213,27 @@ export default function App() {
 
         {/* ─── TAB: UPLOAD & SIMULATE ───────────────────────────────────────────── */}
         {activeTab === 'upload' && (
-          <div style={{ maxWidth: '840px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '28px', textAlign: 'center' }}>
-              <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff' }}>Run Detection & Simulation</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '6px' }}>
-                Analyze real production log files or run interactive attack scenarios with ground-truth validation.
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>Run Detection & Simulation</h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '4px' }}>
+                Test against live synthetic attack campaigns or upload real-world server logs.
               </p>
             </div>
 
             {/* Attack Simulation Panel */}
-            <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <Crosshair size={22} color="var(--accent-cyan)" />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>
-                  Interactive Attack Simulator (Ground-Truth Labels)
+            <div className="card" style={{ padding: '24px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <Crosshair size={18} color="var(--accent-primary)" />
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
+                  Interactive Attack Simulator
                 </h3>
               </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '20px' }}>
-                Choose which attack scenarios to inject into 3-day baseline traffic. Evaluator will automatically score precision and recall against ground truth:
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginBottom: '16px' }}>
+                Select scenarios to inject into 3-day baseline traffic. The engine will parse, build baselines, run detection rules, and generate evaluation metrics:
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
                 {[
                   { id: 'S1', label: 'S1: Loud SSH Brute Force -> Deploy Compromise -> Sudo -> Useradd sysupdate' },
                   { id: 'S2', label: 'S2: Password Spraying across 25 accounts -> Success as user05' },
@@ -1213,20 +1244,20 @@ export default function App() {
                   <label key={item.id} style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    background: selectedScenarios[item.id] ? 'rgba(0, 242, 254, 0.08)' : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${selectedScenarios[item.id] ? 'var(--border-active)' : 'var(--border-subtle)'}`,
+                    gap: '10px',
+                    padding: '10px 14px',
+                    borderRadius: '6px',
+                    background: selectedScenarios[item.id] ? 'var(--accent-primary-subtle)' : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${selectedScenarios[item.id] ? 'var(--accent-primary-border)' : 'var(--border-subtle)'}`,
                     cursor: 'pointer',
-                    fontSize: '0.88rem',
-                    color: selectedScenarios[item.id] ? '#fff' : 'var(--text-secondary)'
+                    fontSize: '0.84rem',
+                    color: selectedScenarios[item.id] ? '#fff' : 'var(--text-muted)'
                   }}>
                     <input 
                       type="checkbox"
                       checked={selectedScenarios[item.id]}
                       onChange={(e) => setSelectedScenarios({ ...selectedScenarios, [item.id]: e.target.checked })}
-                      style={{ accentColor: 'var(--accent-cyan)', width: '16px', height: '16px' }}
+                      style={{ accentColor: 'var(--accent-primary)', width: '15px', height: '15px' }}
                     />
                     <span>{item.label}</span>
                   </label>
@@ -1235,41 +1266,41 @@ export default function App() {
 
               <button 
                 className="btn btn-primary" 
-                style={{ width: '100%', padding: '14px', fontSize: '1rem' }}
+                style={{ width: '100%', padding: '12px', fontSize: '0.9rem' }}
                 onClick={handleRunSimulation}
                 disabled={simulating}
               >
-                {simulating ? <RefreshCw className="animate-spin" size={18} /> : <Play size={18} />}
+                {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} />}
                 {simulating ? 'Injecting Attacks & Running Pipeline...' : 'Generate Logs & Run Attack Simulation'}
               </button>
             </div>
 
             {/* Custom Log Upload Dropzone */}
-            <div className="glass-panel" style={{ padding: '28px', textAlign: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '14px' }}>
-                <Upload size={22} color="#4facfe" />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>
+            <div className="card" style={{ padding: '24px', textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '10px' }}>
+                <Upload size={18} color="var(--accent-warm)" />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>
                   Upload Real Log Files
                 </h3>
               </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '20px' }}>
-                Upload Linux <code style={{ color: 'var(--accent-cyan)' }}>auth.log</code> or Apache/Nginx <code style={{ color: 'var(--accent-cyan)' }}>access.log</code>. Formats are auto-detected and malformed lines are handled gracefully.
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginBottom: '16px' }}>
+                Supports Linux <code style={{ color: '#fff' }}>auth.log</code> or Apache/Nginx <code style={{ color: '#fff' }}>access.log</code>. Formats are auto-detected.
               </p>
 
               <label style={{
                 display: 'block',
-                padding: '36px',
-                borderRadius: '12px',
-                border: '2px dashed var(--border-subtle)',
-                background: 'rgba(255,255,255,0.02)',
+                padding: '30px',
+                borderRadius: '8px',
+                border: '1px dashed var(--border-medium)',
+                background: 'rgba(255,255,255,0.015)',
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'all 0.15s',
               }}>
-                <Upload size={32} color="var(--accent-cyan)" style={{ margin: '0 auto 12px' }} />
-                <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>
+                <Upload size={28} color="var(--accent-primary)" style={{ margin: '0 auto 10px' }} />
+                <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.88rem' }}>
                   Click to select log files or drag & drop here
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-faint)', marginTop: '4px' }}>
                   Accepts .log, .txt files
                 </div>
                 <input 
@@ -1287,21 +1318,21 @@ export default function App() {
 
       {/* ─── Footer ───────────────────────────────────────────────────────────── */}
       <footer style={{
-        padding: '20px 36px',
+        padding: '16px 32px',
         borderTop: '1px solid var(--border-subtle)',
-        background: 'var(--bg-primary)',
-        fontSize: '0.8rem',
-        color: 'var(--text-muted)',
+        background: 'var(--bg-surface)',
+        fontSize: '0.76rem',
+        color: 'var(--text-faint)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
         <div>
-          ChainTrace v1.2.0 · ALGOTHON'26 · ALG-CYBER-01: Find the Intruder
+          ChainTrace v1.2.0 · ALGOTHON'26 · Problem Statement ALG-CYBER-01
         </div>
-        <div style={{ display: 'flex', gap: '20px' }}>
-          <span>Detection: <strong>Bhanu Prasad</strong></span>
-          <span>Frontend & Baseline: <strong>Mahadev H</strong></span>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <span>Detection Engine: <strong>Bhanu Prasad</strong></span>
+          <span>Frontend & Simulation: <strong>Mahadev H</strong></span>
         </div>
       </footer>
 
