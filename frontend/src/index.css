@@ -1,19 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
 :root {
-  /* Light Warm Glassmorphism System — Exact Reference Match */
-  --bg-app: #F7F4EE;
-  --bg-sidebar: rgba(255, 255, 255, 0.70);
-  --bg-header: rgba(255, 255, 255, 0.74);
-  --bg-glass: rgba(255, 255, 255, 0.62);
-  --bg-glass-card: rgba(255, 255, 255, 0.65);
-  --bg-glass-hover: rgba(255, 255, 255, 0.88);
-  --bg-input: rgba(255, 255, 255, 0.85);
+  /* ─── Warm Light Glassmorphism — Reference-Match Palette ─── */
+  --bg-app: #F5EFE7;
+  --bg-sidebar: rgba(255, 255, 255, 0.52);
+  --bg-header: rgba(255, 255, 255, 0.55);
+  --bg-glass: rgba(255, 255, 255, 0.50);
+  --bg-glass-card: rgba(255, 255, 255, 0.52);
+  --bg-glass-hover: rgba(255, 255, 255, 0.72);
+  --bg-input: rgba(255, 255, 255, 0.65);
   --bg-terminal: #1A1D20;
 
   /* Frosted Glass Borders & Specular Highlights */
   --border-subtle: rgba(225, 215, 200, 0.65);
   --border-medium: rgba(210, 195, 175, 0.8);
   --border-strong: rgba(195, 175, 150, 0.9);
-  --glass-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.35);
+  --glass-inner-highlight: inset 0 1.5px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.35);
 
   /* Primary Warm Accent System (Cream, Peach, Warm Orange, Coral) */
   --color-primary-warm: #E07A5F;
@@ -64,43 +66,50 @@
 
 body {
   font-family: var(--font-main);
-  background-color: var(--bg-app);
+  background-color: #F6F0E8;
   color: var(--text-primary);
   min-height: 100vh;
   line-height: 1.5;
-  /* Ambient warm peach/gold atmospheric background waves & delicate grid */
-  background-image: 
-    radial-gradient(ellipse at 88% 8%, rgba(254, 215, 170, 0.55) 0%, rgba(253, 186, 116, 0.22) 35%, transparent 68%),
-    radial-gradient(ellipse at 8% 45%, rgba(187, 247, 208, 0.25) 0%, rgba(254, 240, 138, 0.18) 32%, transparent 62%),
-    radial-gradient(circle at 75% 85%, rgba(254, 205, 211, 0.35) 0%, rgba(253, 186, 116, 0.2) 36%, transparent 65%),
-    radial-gradient(circle at 35% 15%, rgba(255, 237, 213, 0.45) 0%, transparent 50%),
-    linear-gradient(to right, rgba(160, 130, 100, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(160, 130, 100, 0.04) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+  /* Reference-image background:
+     Top-right: vivid warm apricot bloom
+     Top-left: soft peach / coral bloom
+     Bottom-right: soft blush rose / amber
+     Left-center: faint sage green
+  */
+  background-image:
+    radial-gradient(ellipse 75% 60% at 92% 6%, rgba(255, 195, 130, 0.80) 0%, rgba(255, 165, 85, 0.45) 42%, transparent 72%),
+    radial-gradient(ellipse 65% 50% at 15% 15%, rgba(255, 215, 185, 0.70) 0%, rgba(255, 195, 160, 0.35) 40%, transparent 68%),
+    radial-gradient(ellipse 60% 55% at 85% 88%, rgba(255, 180, 160, 0.65) 0%, rgba(255, 150, 125, 0.30) 45%, transparent 70%),
+    radial-gradient(ellipse 50% 45% at 5% 50%, rgba(165, 230, 185, 0.40) 0%, rgba(190, 235, 205, 0.18) 38%, transparent 65%),
+    radial-gradient(ellipse 45% 40% at 50% 75%, rgba(255, 210, 175, 0.45) 0%, transparent 60%);
+  background-size: 100% 100%;
   background-attachment: fixed;
   overflow-x: hidden;
 }
 
-/* Frosted Glass Panels */
+/* ─── Frosted Glass Panel ─── */
 .glass-panel {
-  background: var(--bg-glass-card);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   border-radius: var(--radius-xl);
-  box-shadow: 
-    var(--glass-inner-highlight),
-    0 10px 35px rgba(120, 85, 50, 0.06),
-    0 1px 3px rgba(80, 60, 40, 0.04);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.35),
+    0 10px 32px rgba(180, 100, 40, 0.10),
+    0 2px 8px rgba(100, 60, 20, 0.05);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel:hover {
-  background: var(--bg-glass-hover);
-  box-shadow: 
-    var(--glass-inner-highlight),
-    0 14px 40px rgba(120, 85, 50, 0.09),
-    0 2px 6px rgba(80, 60, 40, 0.05);
+  background: rgba(255, 255, 255, 0.70);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.45),
+    0 16px 44px rgba(180, 100, 40, 0.14),
+    0 4px 12px rgba(100, 60, 20, 0.06);
 }
 
 /* Active Nav Pill with Warm Peach Gradient */

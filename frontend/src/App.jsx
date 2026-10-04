@@ -23,107 +23,114 @@ const API_BASE = 'http://127.0.0.1:8000/api';
 
 /* ─── Visual Helper SVG Components (Single Source of Truth Aesthetic) ──────── */
 
-function NetworkGlobeSvg() {
+/* Hero Waves SVG — matches reference image exactly: warm orange wave terrain in bottom-right of hero */
+function HeroWavesSvg() {
   return (
     <svg
-      width="540"
-      height="240"
-      viewBox="0 0 540 240"
+      viewBox="0 0 900 240"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      preserveAspectRatio="xMaxYMax meet"
       style={{
         position: 'absolute',
-        right: '0',
-        top: '0',
-        bottom: '0',
-        width: '540px',
+        right: 0,
+        bottom: 0,
+        width: '65%',
         height: '100%',
-        opacity: 0.85,
         pointerEvents: 'none',
         zIndex: 1,
-        overflow: 'hidden',
       }}
     >
       <defs>
-        <radialGradient id="heroGlobeRadialGlow" cx="68%" cy="50%" r="52%">
-          <stop offset="0%" stopColor="#FED7AA" stopOpacity="0.7" />
-          <stop offset="35%" stopColor="#FDBA74" stopOpacity="0.32" />
-          <stop offset="70%" stopColor="#FB923C" stopOpacity="0.08" />
+        {/* Warm orange ambient glow */}
+        <radialGradient id="hglow" cx="70%" cy="65%" r="50%">
+          <stop offset="0%" stopColor="#FFD49A" stopOpacity="0.85" />
+          <stop offset="50%" stopColor="#FFBA70" stopOpacity="0.40" />
           <stop offset="100%" stopColor="#F97316" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="heroRibbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#EA580C" stopOpacity="0.6" />
-          <stop offset="50%" stopColor="#F59E0B" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#FDBA74" stopOpacity="0.1" />
+        {/* Wave fill — orange warm */}
+        <linearGradient id="wf1" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FF9944" stopOpacity="0" />
+          <stop offset="25%" stopColor="#FF8833" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#FF6611" stopOpacity="0.20" />
+        </linearGradient>
+        <linearGradient id="wf2" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FFAA55" stopOpacity="0" />
+          <stop offset="30%" stopColor="#FF9933" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#FF7722" stopOpacity="0.15" />
+        </linearGradient>
+        <linearGradient id="wf3" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FFCC88" stopOpacity="0" />
+          <stop offset="35%" stopColor="#FFB366" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#FF9944" stopOpacity="0.10" />
+        </linearGradient>
+        <linearGradient id="wf4" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FFE0B2" stopOpacity="0" />
+          <stop offset="40%" stopColor="#FFD080" stopOpacity="0.16" />
+          <stop offset="100%" stopColor="#FFBB55" stopOpacity="0.08" />
         </linearGradient>
       </defs>
 
-      {/* Atmospheric Warm Glowing Backdrop */}
-      <ellipse cx="370" cy="120" rx="150" ry="110" fill="url(#heroGlobeRadialGlow)" />
+      {/* Warm glow backdrop */}
+      <ellipse cx="620" cy="160" rx="300" ry="160" fill="url(#hglow)" />
 
-      {/* Sinuous 3D Ribbon Contours Sweeping Across Hero */}
-      <path d="M 40 25 C 160 70, 250 15, 360 115 C 430 170, 480 85, 545 105" stroke="#FDBA74" strokeWidth="1.2" strokeDasharray="3 4" fill="none" opacity="0.65" />
-      <path d="M 70 45 C 180 90, 270 30, 365 130 C 435 185, 485 105, 545 125" stroke="#F97316" strokeWidth="0.9" fill="none" opacity="0.5" />
-      <path d="M 110 65 C 210 110, 290 50, 370 145 C 430 195, 490 125, 545 145" stroke="#E07A5F" strokeWidth="0.8" strokeDasharray="2 3" fill="none" opacity="0.45" />
-      <path d="M 10 15 C 130 50, 220 5, 340 95 C 410 145, 465 65, 545 85" stroke="#FED7AA" strokeWidth="1.4" fill="none" opacity="0.75" />
+      {/* Wave layer 1 — deepest (bottom-most), coral-orange, fills entire bottom */}
+      <path
+        d="M 0 240 C 100 200, 180 235, 290 195 C 380 160, 450 210, 550 172 C 650 134, 740 185, 900 148 L 900 260 L 0 260 Z"
+        fill="url(#wf1)" opacity="0.95"
+      />
+      <path
+        d="M 0 240 C 100 200, 180 235, 290 195 C 380 160, 450 210, 550 172 C 650 134, 740 185, 900 148"
+        stroke="#FF8833" strokeWidth="2.0" fill="none" opacity="0.60"
+      />
 
-      {/* 3D Spherical Coordinate Wireframe */}
-      <g transform="rotate(-12 370 120)">
-        {/* Silhouette Outlines */}
-        <circle cx="370" cy="120" r="98" stroke="#EA580C" strokeWidth="0.8" opacity="0.35" fill="none" />
-        <circle cx="370" cy="120" r="97" stroke="#F59E0B" strokeWidth="1.2" strokeDasharray="3 4" opacity="0.65" fill="none" />
-        <circle cx="370" cy="120" r="78" stroke="#E07A5F" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.45" fill="none" />
+      {/* Wave layer 2 — amber, slightly higher */}
+      <path
+        d="M 0 214 C 90 174, 175 210, 280 170 C 368 138, 440 185, 540 148 C 640 110, 728 162, 900 122 L 900 260 L 0 260 Z"
+        fill="url(#wf2)" opacity="0.85"
+      />
+      <path
+        d="M 0 214 C 90 174, 175 210, 280 170 C 368 138, 440 185, 540 148 C 640 110, 728 162, 900 122"
+        stroke="#FFAA44" strokeWidth="1.6" fill="none" opacity="0.55"
+      />
 
-        {/* Latitudes */}
-        <ellipse cx="370" cy="120" rx="97" ry="76" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" fill="none" />
-        <ellipse cx="370" cy="120" rx="97" ry="46" stroke="#F59E0B" strokeWidth="0.85" strokeDasharray="3 3" opacity="0.55" fill="none" />
-        <ellipse cx="370" cy="120" rx="97" ry="18" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" fill="none" />
-        <ellipse cx="370" cy="90" rx="88" ry="26" stroke="#F97316" strokeWidth="0.75" opacity="0.4" fill="none" />
-        <ellipse cx="370" cy="150" rx="88" ry="26" stroke="#F97316" strokeWidth="0.75" opacity="0.4" fill="none" />
-        <ellipse cx="370" cy="65" rx="72" ry="20" stroke="#FDBA74" strokeWidth="0.6" opacity="0.35" fill="none" />
-        <ellipse cx="370" cy="175" rx="72" ry="20" stroke="#FDBA74" strokeWidth="0.6" opacity="0.35" fill="none" />
+      {/* Wave layer 3 — warm gold */}
+      <path
+        d="M 0 188 C 80 148, 165 184, 268 145 C 356 112, 428 158, 528 122 C 628 86, 718 138, 900 98 L 900 260 L 0 260 Z"
+        fill="url(#wf3)" opacity="0.75"
+      />
+      <path
+        d="M 0 188 C 80 148, 165 184, 268 145 C 356 112, 428 158, 528 122 C 628 86, 718 138, 900 98"
+        stroke="#FFCC66" strokeWidth="1.3" fill="none" opacity="0.50"
+      />
 
-        {/* Longitudes */}
-        <ellipse cx="370" cy="120" rx="44" ry="97" stroke="#EA580C" strokeWidth="0.85" opacity="0.45" fill="none" />
-        <ellipse cx="370" cy="120" rx="74" ry="97" stroke="#F59E0B" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.45" fill="none" />
-        <line x1="273" y1="120" x2="467" y2="120" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" />
-        <line x1="370" y1="23" x2="370" y2="217" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" />
+      {/* Wave layer 4 — pale peach, near upper */}
+      <path
+        d="M 0 162 C 72 122, 155 158, 255 120 C 344 86, 414 132, 514 96 C 614 60, 704 112, 900 74 L 900 260 L 0 260 Z"
+        fill="url(#wf4)" opacity="0.60"
+      />
+      <path
+        d="M 0 162 C 72 122, 155 158, 255 120 C 344 86, 414 132, 514 96 C 614 60, 704 112, 900 74"
+        stroke="#FFE099" strokeWidth="1.1" fill="none" opacity="0.42"
+      />
 
-        {/* Dense Glowing Dotted Coordinate Matrix */}
-        {[
-          [335, 95, 3.5, '#EA580C', 0.9],
-          [412, 132, 3.5, '#E07A5F', 0.9],
-          [388, 70, 2.5, '#F97316', 0.8],
-          [318, 136, 3, '#EA580C', 0.85],
-          [425, 90, 2.8, '#F4C7A1', 0.9],
-          [360, 160, 2.5, '#E07A5F', 0.8],
-          [345, 120, 2.5, '#F59E0B', 0.75],
-          [395, 120, 3, '#EA580C', 0.8],
-          [370, 75, 2.5, '#F59E0B', 0.75],
-          [370, 165, 2.5, '#F97316', 0.7],
-          [305, 110, 2, '#FED7AA', 0.85],
-          [435, 125, 2.2, '#FED7AA', 0.85],
-          [350, 50, 2.2, '#FDBA74', 0.7],
-          [390, 190, 2, '#FDBA74', 0.7],
-          [320, 80, 2.2, '#EA580C', 0.65],
-          [420, 155, 2.4, '#E07A5F', 0.7],
-          [355, 100, 2, '#F59E0B', 0.8],
-          [385, 140, 2.2, '#F97316', 0.75],
-        ].map(([cx, cy, r, fill, op], idx) => (
-          <g key={idx}>
-            <circle cx={cx} cy={cy} r={r} fill={fill} opacity={op} />
-            <circle cx={cx} cy={cy} r={Number(r) * 1.8} stroke={fill} strokeWidth="0.6" opacity={Number(op) * 0.4} fill="none" />
-          </g>
-        ))}
+      {/* Wave layer 5 — lightest crest line */}
+      <path
+        d="M 0 136 C 65 96, 145 132, 242 96 C 332 62, 400 106, 500 72 C 600 36, 690 88, 900 52"
+        stroke="#FFF2CC" strokeWidth="0.9" fill="none" opacity="0.35"
+      />
 
-        {/* Threat Trajectory Arc */}
-        <path d="M 335 95 Q 370 70 412 132" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.85" />
-        <circle cx="412" cy="132" r="5" fill="#EF4444" opacity="0.9" />
-        <circle cx="412" cy="132" r="9" stroke="#EF4444" strokeWidth="0.8" opacity="0.5" fill="none" />
-      </g>
+      {/* Fine ripple details */}
+      <path d="M 0 226 C 85 186, 168 222, 272 182 C 358 148, 430 196, 530 160 C 630 122, 720 172, 900 134"
+        stroke="#FF9955" strokeWidth="0.8" fill="none" opacity="0.30" strokeDasharray="4 5" />
+      <path d="M 0 200 C 78 160, 160 196, 260 158 C 348 124, 420 170, 520 134 C 620 98, 710 148, 900 110"
+        stroke="#FFBB77" strokeWidth="0.7" fill="none" opacity="0.25" strokeDasharray="3 4" />
+      <path d="M 0 174 C 70 134, 150 170, 248 132 C 338 98, 408 144, 506 108 C 606 72, 698 122, 900 86"
+        stroke="#FFD4A3" strokeWidth="0.6" fill="none" opacity="0.20" strokeDasharray="2 4" />
     </svg>
   );
 }
+
 
 function WaveLinesSvg() {
   return (
@@ -501,11 +508,11 @@ export default function App() {
         alignItems: 'center',
         justifyContent: 'space-between',
         borderRadius: '22px',
-        background: 'rgba(255, 255, 255, 0.74)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        boxShadow: '0 8px 30px rgba(120, 85, 50, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95)',
-        border: '1px solid rgba(255, 255, 255, 0.9)',
+        background: 'rgba(255, 255, 255, 0.55)',
+        backdropFilter: 'blur(28px) saturate(1.8)',
+        WebkitBackdropFilter: 'blur(28px) saturate(1.8)',
+        boxShadow: '0 8px 32px rgba(160, 100, 40, 0.08), inset 0 1.5px 0 rgba(255, 255, 255, 0.95)',
+        border: '1px solid rgba(255, 255, 255, 0.82)',
       }}>
         {/* Left: Brand Logo & Top Route Nav */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -580,7 +587,7 @@ export default function App() {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            background: 'rgba(255, 255, 255, 0.75)',
+            background: 'rgba(255, 255, 255, 0.65)',
             padding: '5px 12px',
             borderRadius: '20px',
             border: '1px solid var(--border-subtle)',
@@ -653,7 +660,7 @@ export default function App() {
             title="Refresh active analysis and server status"
             disabled={loading}
             style={{
-              background: 'rgba(255, 255, 255, 0.85)',
+              background: 'rgba(255, 255, 255, 0.75)',
               border: '1px solid var(--border-subtle)',
               borderRadius: '50%',
               width: '32px',
@@ -704,11 +711,11 @@ export default function App() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          background: 'rgba(255, 255, 255, 0.70)',
-          backdropFilter: 'blur(28px)',
-          WebkitBackdropFilter: 'blur(28px)',
-          boxShadow: '0 10px 35px rgba(120, 85, 50, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95)',
-          border: '1px solid rgba(255, 255, 255, 0.9)',
+          background: 'rgba(255, 255, 255, 0.52)',
+          backdropFilter: 'blur(28px) saturate(1.8)',
+          WebkitBackdropFilter: 'blur(28px) saturate(1.8)',
+          boxShadow: '0 10px 35px rgba(160, 100, 40, 0.08), inset 0 1.5px 0 rgba(255, 255, 255, 0.95)',
+          border: '1px solid rgba(255, 255, 255, 0.82)',
           minHeight: '840px',
         }}>
           {/* Top Sidebar Links */}
@@ -935,70 +942,77 @@ export default function App() {
           {/* ─── TAB: OVERVIEW (Single Source of Truth Aesthetic) ───────────── */}
           {activeTab === 'overview' && (
             <div>
-              {/* 1. Hero Card with Globe Background & Peach CTA */}
-              <div 
-                className="glass-panel" 
+              {/* 1. Hero Card — Exact Reference Match: warm wave background, left text, right CTA */}
+              <div
+                className="glass-panel"
                 style={{
                   position: 'relative',
                   overflow: 'hidden',
-                  padding: '28px 36px',
+                  padding: '30px 36px',
                   borderRadius: '22px',
-                  minHeight: '185px',
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 248, 240, 0.65) 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.92)',
+                  minHeight: '188px',
+                  marginBottom: '16px',
+                  background: 'linear-gradient(105deg, rgba(255,255,255,0.58) 0%, rgba(255,248,240,0.46) 42%, rgba(255,236,218,0.32) 75%, rgba(255,225,195,0.22) 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.85)',
+                  boxShadow: '0 12px 36px rgba(180, 100, 40, 0.12), inset 0 1.5px 0 rgba(255,255,255,0.98)',
+                  backdropFilter: 'blur(30px) saturate(1.8)',
+                  WebkitBackdropFilter: 'blur(30px) saturate(1.8)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '20px',
                 }}
               >
-                {/* Background 3D Network Globe & Parametric Wave SVG */}
-                <NetworkGlobeSvg />
+                {/* Wave pattern SVG fills right portion of hero */}
+                <HeroWavesSvg />
 
                 {/* Left Text Content */}
-                <div style={{ position: 'relative', zIndex: 2, maxWidth: '640px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <div style={{ position: 'relative', zIndex: 2, maxWidth: '580px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                     <span className="pulse-green" />
-                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <span style={{ fontSize: '0.73rem', fontWeight: 800, color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                       INTRUSION DETECTION SYSTEM ACTIVE
                     </span>
                   </div>
 
-                  <h1 style={{ fontSize: '1.9rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1.22 }}>
-                    Correlating <span style={{ color: '#FF5A36' }}>Multi-Stage Cyber Attacks</span> from Raw Server Logs
+                  <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.025em', lineHeight: 1.20 }}>
+                    Correlating{' '}
+                    <span style={{ color: '#E8440A' }}>Multi-Stage Cyber Attacks</span>
+                    {' '}from Raw Server Logs
                   </h1>
 
-                  <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
+                  <p style={{ fontSize: '0.85rem', color: '#6B7280', marginTop: '10px', lineHeight: 1.55 }}>
                     Automated kill-chain grouping, IP-to-User pivot tracking, and explainable rule heuristics (RI-R11).
                   </p>
                 </div>
 
-                {/* Right CTA Button (Fiery Orange/Coral Gradient with Arrow) */}
+                {/* Right CTA Button — pill shape with play icon, matches reference */}
                 <div style={{ position: 'relative', zIndex: 2, flexShrink: 0 }}>
-                  <button 
+                  <button
                     onClick={handleRunSimulation}
                     disabled={simulating}
                     style={{
-                      background: 'linear-gradient(90deg, #FF7A45 0%, #FF4D4F 100%)',
+                      background: 'linear-gradient(135deg, #FF7733 0%, #EE3311 100%)',
                       color: '#FFFFFF',
                       fontWeight: 700,
-                      fontSize: '0.92rem',
-                      padding: '12px 24px',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(255, 255, 255, 0.4)',
-                      boxShadow: '0 8px 24px rgba(255, 90, 54, 0.42), 0 2px 6px rgba(255, 90, 54, 0.2)',
+                      fontSize: '0.90rem',
+                      padding: '13px 26px',
+                      borderRadius: '14px',
+                      border: '1px solid rgba(255, 255, 255, 0.35)',
+                      boxShadow: '0 8px 28px rgba(238, 68, 24, 0.40), 0 2px 6px rgba(238, 68, 24, 0.18)',
                       cursor: simulating ? 'not-allowed' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
                       transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      whiteSpace: 'nowrap',
                     }}
-                    onMouseEnter={(e) => { if (!simulating) e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+                    onMouseEnter={(e) => { if (!simulating) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(238,68,24,0.52), 0 4px 10px rgba(238,68,24,0.22)'; } }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(238, 68, 24, 0.40), 0 2px 6px rgba(238, 68, 24, 0.18)'; }}
                   >
                     {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={15} fill="#ffffff" />}
-                    <span>{simulating ? 'Injecting S1-S5 & Scoring...' : 'Run Live Attack Simulation'}</span>
-                    <ArrowRight size={15} strokeWidth={2.4} />
+                    <span>{simulating ? 'Running Simulation...' : 'Run Live Attack Simulation'}</span>
+                    <ArrowRight size={15} strokeWidth={2.5} />
                   </button>
                 </div>
               </div>
@@ -1285,8 +1299,10 @@ export default function App() {
                       <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="warmPeachGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#F97316" stopOpacity={0.35} />
-                            <stop offset="95%" stopColor="#F97316" stopOpacity={0.02} />
+                            <stop offset="0%" stopColor="#F97316" stopOpacity={0.75} />
+                            <stop offset="30%" stopColor="#FB923C" stopOpacity={0.48} />
+                            <stop offset="70%" stopColor="#FED7AA" stopOpacity={0.18} />
+                            <stop offset="100%" stopColor="#FFF7ED" stopOpacity={0.04} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(200, 185, 170, 0.35)" vertical={false} />
@@ -1476,9 +1492,11 @@ export default function App() {
                 className="glass-panel" 
                 style={{
                   padding: '18px 26px',
-                  border: '1px solid rgba(252, 165, 165, 0.65)',
-                  background: 'linear-gradient(90deg, rgba(254, 226, 226, 0.75) 0%, rgba(255, 241, 242, 0.6) 50%, rgba(255, 247, 237, 0.6) 100%)',
-                  boxShadow: '0 10px 32px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95)',
+                  border: '1px solid rgba(252, 165, 165, 0.70)',
+                  background: 'linear-gradient(90deg, rgba(254, 226, 226, 0.55) 0%, rgba(255, 241, 242, 0.42) 50%, rgba(255, 247, 237, 0.42) 100%)',
+                  boxShadow: '0 10px 32px rgba(220, 38, 38, 0.09), inset 0 1.5px 0 rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(28px) saturate(1.8)',
+                  WebkitBackdropFilter: 'blur(28px) saturate(1.8)',
                   borderRadius: '20px',
                   display: 'flex',
                   alignItems: 'center',
