@@ -84,7 +84,7 @@ Incident fields **plus** `story`, `alerts`, `evidence`:
 ```json
 {
  "story": [{"ts": "2026-10-04T02:41:09Z", "stage": "Initial Access", "alert_id": "a2",
-            "text": "At 02:41, 185.220.101.7 logged in successfully as deploy right after 214 failed attempts – … (Initial Access, T1078)."}],
+            "text": "At 02:41 UTC, 185.220.101.7 logged in successfully as deploy right after 214 failed attempts – … (Initial Access, T1078)."}],
  "alerts": [{"id": "a2", "rule_id": "R4", "rule_name": "Login after failures", "severity": "critical", "points": 50,
              "stage": "Initial Access", "mitre": {"tactic": "Initial Access", "technique": "T1078"},
              "entity": {"ip": "185.220.101.7", "user": "deploy"},
@@ -95,6 +95,10 @@ Incident fields **plus** `story`, `alerts`, `evidence`:
                               "ts": "2026-10-04T02:00:08Z", "type": "ssh_fail", "src_ip": "185.220.101.7", "user": "admin"}}
 }
 ```
+Dashboard extras (also returned): `evidence_lines`, the same evidence as a flat de-duplicated list in alert order;
+in the summary, `stats` (the counts nested) and `events_over_time[].time` (`"2026-10-04 02:00"` chart label).
+Story text times are UTC and say so; `ts` fields are UTC ISO strings, so the browser may show them in local time.
+
 **Click-to-evidence:** story step → `alert_id` → that alert's `evidence_event_ids` → look each up in `evidence`.
 Show `file:line_no` + `raw` in monospace, and the alert's `reason` above it. Every id in
 `evidence_event_ids` is present in `evidence`. Lists can be long (a brute force has 200+ lines), so paginate or collapse them.

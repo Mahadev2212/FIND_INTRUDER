@@ -23,9 +23,14 @@ def _t(ts) -> str:
 
 
 def _span(first, last) -> str:
+    # Times are labelled UTC: the dashboard shows timestamps in the viewer's local time zone.
     if _t(first) == _t(last):
-        return f"At {_t(first)}"
-    return f"Between {_t(first)} and {_t(last)}"
+        return f"At {_t(first)} UTC"
+    return f"Between {_t(first)} and {_t(last)} UTC"
+
+
+def _at(ts) -> str:
+    return f"At {_t(ts)} UTC"
 
 
 def _join(items: List[str]) -> str:
@@ -72,14 +77,14 @@ SENTENCES: Dict[str, Callable[[List[Alert]], str]] = {
     "R3": lambda g: (f"{_span(g[0].first_seen, g[-1].last_seen)}, {len(g)} IP(s) in {subnet_of(g[0].entity['ip'])} "
                      f"({_ips(g)}) made {_count(g)} failed SSH logins slowly enough that no single IP crosses the "
                      f"brute-force threshold – a low-and-slow attack {_mitre(g[0])}."),
-    "R4": lambda g: (f"At {_t(g[0].last_seen)}, {_ips(g)} logged in successfully as {_users(g)} right after "
+    "R4": lambda g: (f"{_at(g[0].last_seen)}, {_ips(g)} logged in successfully as {_users(g)} right after "
                      f"{_count(g) - len(g)} failed attempts – the password was likely guessed {_mitre(g[0])}."),
     "R5": lambda g: f"{g[0].reason} {_mitre(g[0])}.",
-    "R6": lambda g: (f"At {_t(g[0].last_seen)}, {_users(g)} logged in from {_ips(g)}, an address never seen for "
+    "R6": lambda g: (f"{_at(g[0].last_seen)}, {_users(g)} logged in from {_ips(g)}, an address never seen for "
                      f"this account in the baseline {_mitre(g[0])}."),
-    "R7": lambda g: (f"At {_t(g[0].first_seen)}, {_users(g)} ran sudo/su as root "
+    "R7": lambda g: (f"{_at(g[0].first_seen)}, {_users(g)} ran sudo/su as root "
                      f"{_num(g[0].reason, _FIRST_MIN_RE)} min after the suspicious login {_mitre(g[0])}."),
-    "R8": lambda g: (f"At {_t(g[0].first_seen)}, " + _join([a.reason[0].lower() + a.reason[1:] for a in g])
+    "R8": lambda g: (f"{_at(g[0].first_seen)}, " + _join([a.reason[0].lower() + a.reason[1:] for a in g])
                      + f" – a likely backdoor for persistence {_mitre(g[0])}."),
     "R9": lambda g: (f"{_span(g[0].first_seen, g[-1].last_seen)}, {_ips(g)} probed the web server for hidden "
                      f"pages: " + "; ".join(a.reason.split(': ', 1)[-1] for a in g) + f" {_mitre(g[0])}."),

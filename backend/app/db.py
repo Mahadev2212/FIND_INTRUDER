@@ -74,14 +74,31 @@ def _iso(ts: datetime) -> str:
     return ts.isoformat().replace("+00:00", "Z")
 
 
+def with_evidence_lines(detail: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Add `evidence_lines`: the incident's evidence as a flat list in alert order (no duplicates),
+    which is what the React dashboard's evidence panel renders. `evidence` (dict by id) stays the contract.
+    """
+    seen, lines = set(), []
+    for a in detail["alerts"]:
+        for eid in a["evidence_event_ids"]:
+            if eid not in seen and eid in detail["evidence"]:
+                seen.add(eid)
+                lines.append({"id": eid, **detail["evidence"][eid]})
+    detail["evidence_lines"] = lines
+    return detail
+
+
 def build_summary(analysis_id: str, stats: Dict, incidents: List[Dict], hours: List[tuple],
                   top_entities: List[Dict]) -> Dict[str, Any]:
     levels = Counter(i["level"] for i in incidents)
     return {
         "id": analysis_id,
         **stats,
+        "stats": stats,  # same numbers nested – the React dashboard reads summary.stats.*
         "incidents_by_level": {lvl: levels.get(lvl, 0) for lvl in ("critical", "high", "medium", "low")},
-        "events_over_time": [{"hour": _iso(h), "count": c} for h, c in hours],
+        # "hour" = ISO bucket (contract); "time" = chart label the dashboard's AreaChart uses
+        "events_over_time": [{"hour": _iso(h), "time": f"{h:%Y-%m-%d %H}:00", "count": c} for h, c in hours],
         "top_entities": [{k: e[k] for k in ("type", "value", "risk_score", "level", "alert_count")}
                          for e in top_entities[:5]],
     }
@@ -145,8 +162,8 @@ class MemoryStore:
         by_id = {a.id: a for a in r.alerts}
         alerts = [by_id[i] for i in inc.alert_ids if i in by_id]
         ev_ids = {eid for a in alerts for eid in a.evidence_event_ids}
-        return {**incident_dict(inc), "alerts": [alert_dict(a) for a in alerts],
-                "evidence": {e.id: evidence_dict(e) for e in r.events if e.id in ev_ids}}
+        return with_evidence_lines({**incident_dict(inc), "alerts": [alert_dict(a) for a in alerts],
+                                    "evidence": {e.id: evidence_dict(e) for e in r.events if e.id in ev_ids}})
 
     def entities(self, analysis_id: str) -> Optional[List[Dict[str, Any]]]:
         d = self._get(analysis_id)
@@ -310,7 +327,7 @@ class PostgresStore:
             "WHERE analysis_id = %s AND id = ANY(%s) ORDER BY ts, file, line_no", (analysis_id, ev_ids))
         evidence = {r[0]: {"file": r[1], "line_no": r[2], "raw": r[3], "ts": _iso(r[4]), "type": r[5],
                            "src_ip": r[6], "user": r[7]} for r in ev_rows}
-        return {**inc, "alerts": alerts, "evidence": evidence}
+        return with_evidence_lines({**inc, "alerts": alerts, "evidence": evidence})
 
     def entities(self, analysis_id: str, limit: Optional[int] = None) -> Optional[List[Dict[str, Any]]]:
         if not self.exists(analysis_id):
