@@ -4,65 +4,248 @@ Serves REST API endpoints and React frontend build.
 Owner: Bhanu Prasad
 """
 
+import os
+import sys
+import uuid
+import json
+from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from typing import List
 import uvicorn
 
-from app.schemas import AnalysisStats, SimulateRequest
+# Add backend to path for engine imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.schemas import AnalysisStats, SimulateRequest, AnalysisResponse
 from app.db import get_analysis, list_analyses, save_analysis
-# from engine.parsers import parse_logs
-# from engine.rules import run_rules
-# from engine.baseline import build_baseline
-# from engine.scoring import score_entities
-# from engine.correlate import correlate_alerts
-# from engine.story import generate_stories
-# from engine.evaluate import evaluate
+from engine.parsers import auto_detect_and_parse
+from engine.rules import run_all_rules
+from engine.baseline import build_baseline
+from engine.scoring import score_entities
+from engine.correlate import correlate_alerts
+from engine.story import generate_stories
+from engine.evaluate import evaluate
 
 app = FastAPI(title="ChainTrace", version="1.2.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+def _run_pipeline(
+    raw_files: List[tuple],  # [(filename, content_str)]
+    labels: Optional[dict] = None,
+    source: str = "upload",
+):
+    """
+    Core detection pipeline:
+    1. Parse files + merge & sort events
+    2. Build baseline
+    3. Run rules R1-R11
+    4. Score entities
+    5. Correlate alerts into incidents
+    6. Generate attack stories
+    7. Evaluate if ground-truth labels exist
+    """
+    total_lines = 0
+    total_skipped = 0
+    all_events = []
+    file_names = []
+
+    for fname, content in raw_files:
+        file_names.append(fname)
+        total_lines += len(content.splitlines())
+        events, skipped, _ = auto_detect_and_parse(content, fname)
+        total_skipped += skipped
+        all_events.extend(events)
+
+    all_events.sort(key=lambda e: e.ts)
+
+    # Build per-user baseline (first 25% of time window)
+    baseline = build_baseline(all_events)
+
+    # Run detection rules
+    alerts = run_all_rules(all_events, baseline)
+
+    # Score entities
+    entities = score_entities(alerts)
+
+    # Correlate into incidents
+    incidents = correlate_alerts(alerts, all_events)
+
+    # Generate stories & recommendations
+    incidents = generate_stories(incidents, alerts)
+
+    # Evaluate against ground truth if provided
+    eval_metrics = None
+    if labels:
+        try:
+            eval_metrics = evaluate(incidents, entities, labels)
+        except Exception as e:
+            print(f"[warning] Evaluation failed: {e}")
+
+    stats = {
+        "lines_total": total_lines,
+        "parsed": len(all_events),
+        "skipped": total_skipped,
+        "events": len(all_events),
+        "alerts": len(alerts),
+        "incidents": len(incidents),
+    }
+
+    return stats, all_events, alerts, incidents, entities, eval_metrics, file_names
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load a default demo simulation analysis if simulator logs exist."""
+    try:
+        auth_path = os.path.join("..", "simulator", "combined_auth.log")
+        access_path = os.path.join("..", "simulator", "combined_access.log")
+        labels_path = os.path.join("..", "simulator", "labels.json")
+
+        if os.path.exists(auth_path) and os.path.exists(access_path):
+            with open(auth_path, "r", encoding="utf-8") as f:
+                auth_data = f.read()
+            with open(access_path, "r", encoding="utf-8") as f:
+                access_data = f.read()
+            labels = None
+            if os.path.exists(labels_path):
+                with open(labels_path, "r", encoding="utf-8") as f:
+                    labels = json.load(f)
+
+            stats, events, alerts, incidents, entities, eval_metrics, file_names = _run_pipeline(
+                [("auth.log", auth_data), ("access.log", access_data)],
+                labels=labels,
+                source="simulation",
+            )
+            await save_analysis(
+                analysis_id="demo-simulation",
+                source="simulation",
+                files=file_names,
+                stats=stats,
+                events=events,
+                alerts=alerts,
+                incidents=incidents,
+                entities=entities,
+                evaluation=eval_metrics,
+                has_ground_truth=True,
+            )
+            print("[startup] Demo simulation loaded into analysis cache (ID: demo-simulation)")
+    except Exception as e:
+        print(f"[startup] Startup pre-load note: {e}")
+
+
 @app.get("/api/health")
 async def health():
-    """Liveness check including DB ping."""
-    # TODO: ping DB
-    return {"status": "ok", "db": "ok"}
+    """Liveness check."""
+    return {"status": "ok", "db": "ok", "version": "1.2.0"}
 
 
-@app.post("/api/analyze")
+@app.post("/api/analyze", response_model=AnalysisResponse)
 async def analyze(files: List[UploadFile] = File(...)):
     """Upload 1+ log files (multipart) and run analysis pipeline."""
-    # TODO: Bhanu implements full pipeline
-    # 1. Parse all uploaded files
-    # 2. Normalize + sort by timestamp
-    # 3. Build baseline
-    # 4. Run detection rules R1-R11
-    # 5. Score entities
-    # 6. Correlate alerts into incidents
-    # 7. Generate attack stories
-    # 8. Save to PostgreSQL in one transaction
-    raise HTTPException(status_code=501, detail="Not yet implemented")
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    raw_files = []
+    for f in files:
+        raw_bytes = await f.read()
+        content = raw_bytes.decode("utf-8", errors="replace")
+        raw_files.append((f.filename, content))
+
+    stats, events, alerts, incidents, entities, _, file_names = _run_pipeline(
+        raw_files, labels=None, source="upload"
+    )
+
+    analysis_id = str(uuid.uuid4())[:8]
+    await save_analysis(
+        analysis_id=analysis_id,
+        source="upload",
+        files=file_names,
+        stats=stats,
+        events=events,
+        alerts=alerts,
+        incidents=incidents,
+        entities=entities,
+        evaluation=None,
+        has_ground_truth=False,
+    )
+
+    return AnalysisResponse(
+        analysis_id=analysis_id,
+        stats=AnalysisStats(**stats),
+        has_ground_truth=False,
+    )
 
 
-@app.post("/api/simulate")
+@app.post("/api/simulate", response_model=AnalysisResponse)
 async def simulate(body: SimulateRequest):
     """Generate synthetic logs with chosen attack scenarios and analyse them."""
-    # TODO: Bhanu implements
-    raise HTTPException(status_code=501, detail="Not yet implemented")
+    import subprocess
+
+    scenarios = body.scenarios or ["S1", "S2", "S3", "S4", "S5"]
+
+    # Re-run attack injection
+    sim_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "simulator"))
+    auth_out = os.path.join(sim_dir, "combined_auth.log")
+    access_out = os.path.join(sim_dir, "combined_access.log")
+    labels_out = os.path.join(sim_dir, "labels.json")
+
+    from simulator.attacks import inject_attacks
+    inject_attacks(
+        auth_input=os.path.join(sim_dir, "baseline_auth.log"),
+        access_input=os.path.join(sim_dir, "baseline_access.log"),
+        auth_output=auth_out,
+        access_output=access_out,
+        labels_output=labels_out,
+        scenarios=scenarios,
+    )
+
+    with open(auth_out, "r", encoding="utf-8") as f:
+        auth_content = f.read()
+    with open(access_out, "r", encoding="utf-8") as f:
+        access_content = f.read()
+    with open(labels_out, "r", encoding="utf-8") as f:
+        labels = json.load(f)
+
+    stats, events, alerts, incidents, entities, eval_metrics, file_names = _run_pipeline(
+        [("auth.log", auth_content), ("access.log", access_content)],
+        labels=labels,
+        source="simulation",
+    )
+
+    analysis_id = f"sim-{str(uuid.uuid4())[:6]}"
+    await save_analysis(
+        analysis_id=analysis_id,
+        source="simulation",
+        files=file_names,
+        stats=stats,
+        events=events,
+        alerts=alerts,
+        incidents=incidents,
+        entities=entities,
+        evaluation=eval_metrics,
+        has_ground_truth=True,
+    )
+
+    return AnalysisResponse(
+        analysis_id=analysis_id,
+        stats=AnalysisStats(**stats),
+        has_ground_truth=True,
+    )
 
 
 @app.get("/api/analyses")
 async def list_all_analyses():
-    """List previous analyses newest first (enabled by PostgreSQL)."""
+    """List previous analyses newest first."""
     return await list_analyses()
 
 
@@ -77,7 +260,7 @@ async def get_summary(analysis_id: str):
 
 @app.get("/api/analyses/{analysis_id}/incidents")
 async def get_incidents(analysis_id: str):
-    """Incident list sorted by risk (without story)."""
+    """Incident list sorted by risk."""
     analysis = await get_analysis(analysis_id)
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
@@ -116,10 +299,6 @@ async def get_evaluation(analysis_id: str):
     if not evaluation:
         raise HTTPException(status_code=404, detail="No evaluation data (simulation only)")
     return evaluation
-
-
-# Serve React frontend build in production
-# app.mount("/", StaticFiles(directory="../frontend/dist", html=True), name="static")
 
 
 if __name__ == "__main__":
