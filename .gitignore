@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+*.env
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+.npm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs (generated)
+simulator/baseline_auth.log
+simulator/baseline_access.log
+simulator/combined_auth.log
+simulator/combined_access.log
+simulator/labels.json
+
+# Misc
+prd_content.txt
+extract_pdf.py

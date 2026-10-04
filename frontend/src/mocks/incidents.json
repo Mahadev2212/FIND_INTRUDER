@@ -1,0 +1,57 @@
+[
+  {
+    "id": "inc-001",
+    "title": "SSH compromise with persistence",
+    "risk_score": 94,
+    "level": "critical",
+    "entities": { "ips": ["185.220.101.7"], "users": ["deploy", "sysupdate"] },
+    "start": "2026-10-04T02:03:11Z",
+    "end": "2026-10-04T02:45:02Z",
+    "stages": ["Credential Access", "Initial Access", "Privilege Escalation", "Persistence"],
+    "alert_ids": ["a1", "a2", "a3", "a4"]
+  },
+  {
+    "id": "inc-002",
+    "title": "Web reconnaissance to possible exfiltration",
+    "risk_score": 78,
+    "level": "high",
+    "entities": { "ips": ["45.33.10.9"], "users": [] },
+    "start": "2026-10-04T14:00:10Z",
+    "end": "2026-10-04T14:15:55Z",
+    "stages": ["Reconnaissance", "Initial Access", "Exfiltration"],
+    "alert_ids": ["a5", "a6", "a7"]
+  },
+  {
+    "id": "inc-003",
+    "title": "Successful credential attack",
+    "risk_score": 60,
+    "level": "high",
+    "entities": { "ips": ["45.33.10.8"], "users": ["user05"] },
+    "start": "2026-10-04T03:00:22Z",
+    "end": "2026-10-04T03:14:10Z",
+    "stages": ["Credential Access", "Initial Access"],
+    "alert_ids": ["a8", "a9"]
+  },
+  {
+    "id": "inc-004",
+    "title": "Insider threat – off-hours access with possible exfiltration",
+    "risk_score": 55,
+    "level": "medium",
+    "entities": { "ips": ["172.16.5.20"], "users": ["user15"] },
+    "start": "2026-10-04T03:10:00Z",
+    "end": "2026-10-04T03:25:00Z",
+    "stages": ["Initial Access", "Privilege Escalation", "Exfiltration"],
+    "alert_ids": ["a10", "a11", "a12"]
+  },
+  {
+    "id": "inc-005",
+    "title": "Credential attack",
+    "risk_score": 30,
+    "level": "medium",
+    "entities": { "ips": ["192.168.100.10", "192.168.100.11", "192.168.100.12"], "users": [] },
+    "start": "2026-10-04T00:05:00Z",
+    "end": "2026-10-04T06:00:00Z",
+    "stages": ["Credential Access"],
+    "alert_ids": ["a13"]
+  }
+]

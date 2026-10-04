@@ -1,0 +1,14 @@
+{
+  "scenarios_detected": 5,
+  "scenarios_total": 5,
+  "precision": 0.92,
+  "recall": 0.95,
+  "critical_false_positives": 0,
+  "per_scenario": [
+    { "scenario_id": "S1", "detected": true,  "expected_entities": ["185.220.101.7", "deploy", "sysupdate"], "found_entities": ["185.220.101.7", "deploy", "sysupdate"] },
+    { "scenario_id": "S2", "detected": true,  "expected_entities": ["45.33.10.8", "user05"],                  "found_entities": ["45.33.10.8", "user05"] },
+    { "scenario_id": "S3", "detected": true,  "expected_entities": ["45.33.10.9"],                             "found_entities": ["45.33.10.9"] },
+    { "scenario_id": "S4", "detected": true,  "expected_entities": ["192.168.100.10", "192.168.100.11", "192.168.100.12"], "found_entities": ["192.168.100.10", "192.168.100.11", "192.168.100.12"] },
+    { "scenario_id": "S5", "detected": true,  "expected_entities": ["172.16.5.20", "user15"],                 "found_entities": ["172.16.5.20", "user15"] }
+  ]
+}

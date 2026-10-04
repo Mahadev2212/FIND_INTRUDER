@@ -1,0 +1,12 @@
+{
+  "analysis_id": "mock-analysis-001",
+  "stats": {
+    "lines_total": 52341,
+    "parsed": 51812,
+    "skipped": 529,
+    "events": 51812,
+    "alerts": 18,
+    "incidents": 5
+  },
+  "has_ground_truth": true
+}

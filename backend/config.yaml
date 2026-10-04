@@ -1,0 +1,57 @@
+# ChainTrace – All detection thresholds in one place.
+# Change thresholds here without touching code (Bhanu tunes in Hour 9).
+
+thresholds:
+  # R1: SSH Brute Force
+  r1_threshold: 10           # minimum failed logins from one IP
+  r1_window_minutes: 5       # time window in minutes
+
+  # R2: Password Spraying
+  r2_distinct_users: 5       # minimum distinct usernames targeted
+  r2_window_minutes: 10
+
+  # R3: Low-and-Slow Brute Force
+  r3_threshold: 15           # minimum failures across /24 subnet
+  r3_window_hours: 6
+  r3_ignore_typo_minutes: 5  # a failure followed by success (same user+IP) within this time is a typo
+
+  # R4: Login After Failures
+  r4_fail_threshold: 5       # minimum prior failures
+  r4_lookback_minutes: 60
+
+  # R5: Off-Hours Login (baseline-based)
+  # default hours 08-20 are in baseline.py; per-user baseline overrides
+  off_hours_default_start: 8
+  off_hours_default_end: 20
+
+  # R6: New Source IP – no extra threshold (baseline-driven)
+
+  # R7: Privilege Use After Suspicious Login
+  r7_window_minutes: 60
+
+  # R9: Web Scanning
+  r9_404_threshold: 30
+  r9_window_minutes: 5
+
+  # R11: Possible Large Data Transfer
+  r11_window_minutes: 10
+  r11_abs_bytes: 52428800    # 50 MB in bytes
+  r11_median_multiplier: 20
+  r11_min_bytes: 5242880     # 5 MB floor for the median rule (avoids noise on tiny logs)
+
+  # Baseline settings (R5, R6)
+  baseline_min_logins: 5     # skip R5/R6 for users with fewer logins in baseline window
+  baseline_fraction: 0.25    # first 25% of time range used for baseline
+
+  # Risk scoring: each rule counts at most this many times per entity/incident
+  rule_repeat_cap: 2
+
+  # Correlation (alert graph)
+  correlation_window_hours: 2
+
+  # Evaluation: an entity counts as "flagged" if it appears in an incident with at least this risk
+  evaluation_min_incident_risk: 30
+
+parsing:
+  default_year: 2026            # syslog lines have no year; rollover Dec→Jan is handled automatically
+  auth_utc_offset_minutes: 0    # syslog lines have no timezone; offset of the server clock from UTC
