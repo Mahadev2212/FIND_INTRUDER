@@ -3161,9 +3161,9 @@ export default function App() {
               <p>Optional. Generates 3 days of synthetic normal traffic with chosen attacks (S1–S5) hidden inside, so detection can be
                  scored against known answers. It never uses or changes your uploaded files.</p>
 
-              <h3 style={{ fontWeight: 800, color: '#111827', margin: '16px 0 6px' }}>5. API</h3>
-              <p>Interactive API reference: <a href="/docs" target="_blank" rel="noreferrer" style={{ color: '#EA580C', fontWeight: 700 }}>/docs</a>.
-                 Detection is deterministic – no AI guessing; every alert links to the raw log lines that triggered it.</p>
+              <h3 style={{ fontWeight: 800, color: '#111827', margin: '16px 0 6px' }}>5. How detection works</h3>
+              <p>Detection is deterministic – no AI guessing. The same logs always give the same result, and every alert
+                 links to the exact raw log lines that triggered it.</p>
             </div>
           </div>
         </div>
