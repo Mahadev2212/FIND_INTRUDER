@@ -272,7 +272,7 @@ export default function App() {
 
   async function checkHealth() {
     try {
-      const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) });
+      const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(10000) });
       if (res.ok) {
         setBackendAlive(true);
         return true;
@@ -290,10 +290,13 @@ export default function App() {
   async function initApp() {
     setLoading(true);
     const alive = await checkHealth();
-    if (alive && !useMocks) {
+    if (useMocks) {
+      applyMockData();
+    } else if (alive) {
       await fetchAnalyses();
     } else {
-      applyMockData();
+      setErrorMsg("Backend is not reachable yet (a free server can take ~1 minute to wake up). Retrying…");
+      setTimeout(() => initApp(), 8000);
     }
     setLoading(false);
   }
@@ -325,14 +328,15 @@ export default function App() {
       }
     } catch (e) {
       console.warn("Failed fetching analyses:", e);
-      if (!useMocks) applyMockData();
+      if (useMocks) applyMockData();
+      else setErrorMsg("Could not load analyses from the backend: " + e.message);
     }
   }
 
   // 3. Load active analysis data by ID
   async function loadAnalysisData(id) {
     if (!id || id === 'demo-simulation') {
-      if (useMocks || !backendAlive) {
+      if (useMocks) {
         applyMockData();
       }
       return;
@@ -389,7 +393,7 @@ export default function App() {
     const targetIncId = incId || selectedIncidentId;
     if (!targetAid || !targetIncId) return;
 
-    if (useMocks || !backendAlive || targetAid === 'demo-simulation') {
+    if (useMocks || targetAid === 'demo-simulation') {
       setIncidentDetail(mockIncidentDetail);
       return;
     }
@@ -420,10 +424,12 @@ export default function App() {
   async function handleRefresh() {
     setLoading(true);
     const alive = await checkHealth();
-    if (alive && !useMocks) {
+    if (useMocks) {
+      applyMockData();
+    } else if (alive) {
       await fetchAnalyses(analysisId);
     } else {
-      applyMockData();
+      setErrorMsg("Backend is not reachable right now. Please try again in a moment.");
     }
     setLoading(false);
   }
@@ -441,7 +447,7 @@ export default function App() {
       return;
     }
 
-    if (useMocks || !backendAlive) {
+    if (useMocks) {
       setTimeout(() => {
         applyMockData();
         setSimulating(false);
@@ -724,7 +730,7 @@ export default function App() {
               flexShrink: 0,
             }} />
             <span style={{ color: (backendAlive && !useMocks) ? '#15803D' : '#DC2626' }}>
-              {(backendAlive && !useMocks) ? 'LIVE BACKEND :8000' : (useMocks ? 'OFFLINE MOCKS' : 'BACKEND OFFLINE')}
+              {(backendAlive && !useMocks) ? 'LIVE BACKEND' : (useMocks ? 'OFFLINE MOCKS' : 'BACKEND OFFLINE')}
             </span>
           </div>
 
@@ -930,9 +936,11 @@ export default function App() {
                 </div>
                 <div>
                   <span style={{ fontWeight: 700, color: '#111827' }}>{successMsg}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
-                    (Ground-truth labels synced in Evaluation Benchmark)
-                  </span>
+                  {successMsg?.toLowerCase().includes('simulation') && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                      (Ground-truth labels synced in Evaluation Benchmark)
+                    </span>
+                  )}
                 </div>
               </div>
               <button 

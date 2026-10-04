@@ -13,6 +13,7 @@ from typing import List
 
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
@@ -113,10 +114,12 @@ async def analyze(files: List[UploadFile] = File(...)):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
     try:
-        result = run_analysis(contents)
+        # CPU-heavy analysis + DB write run in a worker thread so /api/health and other
+        # requests stay responsive while a large upload is being processed.
+        result = await run_in_threadpool(run_analysis, contents)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return _save("upload", result)
+    return await run_in_threadpool(_save, "upload", result)
 
 
 @app.post("/api/simulate")
