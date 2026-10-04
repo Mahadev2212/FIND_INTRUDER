@@ -59,7 +59,8 @@ def _unique_names(names: List[str]) -> List[str]:
     return out
 
 
-def run_analysis(files: List[Tuple[str, str]], labels: Optional[Dict[str, Any]] = None) -> AnalysisResult:
+def run_analysis(files: List[Tuple[str, str]], labels: Optional[Dict[str, Any]] = None,
+                 baseline_incidents: Optional[List[Incident]] = None) -> AnalysisResult:
     """
     files: [(filename, text_content)]. Raises ValueError (incl. NoParsableLines) on bad input.
     """
@@ -103,18 +104,28 @@ def run_analysis(files: List[Tuple[str, str]], labels: Optional[Dict[str, Any]] 
     result = AnalysisResult(files=names, stats=stats, events=events, alerts=alerts,
                             incidents=incidents, entities=entities, file_formats=formats, labels=labels)
     if labels is not None:
-        result.evaluation = evaluate(incidents, labels)
+        result.evaluation = evaluate(incidents, labels, baseline_incidents)
     return result
 
 
 def simulate(scenarios: List[str], seed: int = 42) -> AnalysisResult:
-    """Generate baseline + chosen attacks (simulator/) and analyse them, with ground truth."""
+    """
+    Generate baseline + chosen attacks (simulator/) and analyse them, with ground truth.
+    The same normal traffic is also analysed WITHOUT attacks, so the evaluation can report
+    critical false positives on clean data exactly as the PRD defines it.
+    """
     if REPO_ROOT not in sys.path:
         sys.path.insert(0, REPO_ROOT)
     from simulator.attacks import generate
 
-    auth_text, access_text, labels = generate(scenarios, seed)
-    return run_analysis([("auth.log", auth_text), ("access.log", access_text)], labels=labels)
+    clean_auth, clean_access, _ = generate([], seed)
+    clean = run_analysis([("auth.log", clean_auth), ("access.log", clean_access)])
+    if not scenarios:
+        auth_text, access_text, labels = clean_auth, clean_access, generate([], seed)[2]
+    else:
+        auth_text, access_text, labels = generate(scenarios, seed)
+    return run_analysis([("auth.log", auth_text), ("access.log", access_text)], labels=labels,
+                        baseline_incidents=clean.incidents)
 
 
 def print_report(r: AnalysisResult) -> None:
@@ -133,7 +144,7 @@ def print_report(r: AnalysisResult) -> None:
         ev = r.evaluation
         print(f"Scenarios detected {ev['scenarios_detected']}/{ev['scenarios_total']} | "
               f"precision {ev['precision']} | recall {ev['recall']} | "
-              f"critical false positives {ev['critical_false_positives']}")
+              f"critical false positives {ev['critical_false_positives']} ({ev['critical_false_positives_source']})")
         for sc in ev["per_scenario"]:
             print(f"    {sc['scenario_id']}: {'✓' if sc['detected'] else '✗'} {sc['incident_id'] or ''} "
                   f"found {sc['found_entities']} of {sc['expected_entities']}")
