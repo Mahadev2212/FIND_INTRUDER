@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShieldAlert, Activity, FileText, Crosshair, Users, 
   CheckCircle2, AlertTriangle, AlertCircle, ArrowRight, 
@@ -222,6 +222,10 @@ export default function App() {
     S5: true
   });
   const [simulating, setSimulating] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const busy = simulating || uploading;           // only one analysis job at a time
+  const loadSeq = useRef(0);                      // guards against out-of-order responses
 
   // Filter states
   const [incidentFilter, setIncidentFilter] = useState('all');
@@ -343,47 +347,37 @@ export default function App() {
     }
     setLoading(true);
     setErrorMsg(null);
+    const token = ++loadSeq.current;
     try {
-      const sumRes = await fetch(`${API_BASE}/analyses/${id}/summary`);
-      if (sumRes.ok) {
-        setSummary(await sumRes.json());
-      } else {
-        throw new Error(`Summary not found (${sumRes.status})`);
+      // Fetch everything for this dataset, then apply it in one go - but only if no newer
+      // dataset was requested meanwhile (prevents mixing an upload with a simulation).
+      const [sumRes, incRes, entRes, evalRes] = await Promise.all([
+        fetch(`${API_BASE}/analyses/${id}/summary`),
+        fetch(`${API_BASE}/analyses/${id}/incidents`),
+        fetch(`${API_BASE}/analyses/${id}/entities`),
+        fetch(`${API_BASE}/analyses/${id}/evaluation`),
+      ]);
+      if (!sumRes.ok) throw new Error(`Summary not found (${sumRes.status})`);
+      const sumData = await sumRes.json();
+      const incData = incRes.ok ? await incRes.json() : [];
+      const entData = entRes.ok ? await entRes.json() : [];
+      const evalData = evalRes.ok ? await evalRes.json() : null;
+      let detail = null;
+      if (incData.length > 0) {
+        const dRes = await fetch(`${API_BASE}/analyses/${id}/incidents/${incData[0].id}`);
+        if (dRes.ok) detail = await dRes.json();
       }
-
-      const incRes = await fetch(`${API_BASE}/analyses/${id}/incidents`);
-      if (incRes.ok) {
-        const incData = await incRes.json();
-        setIncidents(incData);
-        if (incData.length > 0) {
-          const firstId = incData[0].id;
-          setSelectedIncidentId(firstId);
-          await fetchIncidentDetail(id, firstId);
-        } else {
-          setSelectedIncidentId(null);
-          setIncidentDetail(null);
-        }
-      } else {
-        setIncidents([]);
-        setSelectedIncidentId(null);
-        setIncidentDetail(null);
-      }
-
-      const entRes = await fetch(`${API_BASE}/analyses/${id}/entities`);
-      if (entRes.ok) setEntities(await entRes.json());
-      else setEntities([]);
-
-      const evalRes = await fetch(`${API_BASE}/analyses/${id}/evaluation`);
-      if (evalRes.ok) {
-        setEvaluation(await evalRes.json());
-      } else {
-        setEvaluation(null);
-      }
-
+      if (token !== loadSeq.current) return;   // stale response - a newer dataset is loading
+      setSummary(sumData);
+      setIncidents(incData);
+      setSelectedIncidentId(incData[0]?.id || null);
+      setIncidentDetail(detail);
+      setEntities(entData);
+      setEvaluation(evalData);
     } catch (err) {
-      setErrorMsg("Failed to load analysis: " + err.message);
+      if (token === loadSeq.current) setErrorMsg("Failed to load analysis: " + err.message);
     } finally {
-      setLoading(false);
+      if (token === loadSeq.current) setLoading(false);
     }
   }
 
@@ -436,6 +430,7 @@ export default function App() {
 
   // 5. Run simulation trigger
   async function handleRunSimulation() {
+    if (busy) return;
     setSimulating(true);
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -486,9 +481,15 @@ export default function App() {
   }
 
   // 6. Upload logs trigger
+  function handleFileSelect(e) {
+    setPendingFiles(Array.from(e.target.files || []));
+    setErrorMsg(null);
+  }
+
   async function handleFileUpload(e) {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+    const files = e?.target?.files ? Array.from(e.target.files) : pendingFiles;
+    if (files.length === 0 || busy) return;
+    setUploading(true);
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -511,11 +512,13 @@ export default function App() {
       setSelectedIncidentId(null);
       setIncidentDetail(null);
       await fetchAnalyses(resp.analysis_id);
-      setSuccessMsg(`✓ Upload analyzed! Detected ${resp.stats?.incidents ?? 0} incidents across ${resp.stats?.events ?? 0} events.`);
+      setSuccessMsg(`✓ Your logs were analyzed (${files.map(f => f.name).join(', ')}): ${resp.stats?.incidents ?? 0} incident(s) in ${(resp.stats?.lines_total ?? 0).toLocaleString()} lines.`);
+      setPendingFiles([]);
       setActiveTab('overview');
     } catch (err) {
       setErrorMsg("Log upload failed: " + err.message);
     } finally {
+      setUploading(false);
       setLoading(false);
     }
   }
@@ -1024,6 +1027,25 @@ export default function App() {
           {/* ─── TAB: OVERVIEW (Single Source of Truth Aesthetic) ───────────── */}
           {activeTab === 'overview' && (
             <div>
+              {(() => {
+                const current = analyses.find(a => a.id === analysisId);
+                if (!current || useMocks) return null;
+                const isUpload = current.source === 'upload';
+                return (
+                  <div className="glass-panel" style={{
+                    padding: '12px 18px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px',
+                    borderLeft: `4px solid ${isUpload ? '#16A34A' : '#EA580C'}`,
+                  }}>
+                    {isUpload ? <Upload size={18} color="#16A34A" /> : <Crosshair size={18} color="#EA580C" />}
+                    <div style={{ fontSize: '0.86rem', color: '#111827' }}>
+                      <strong>{isUpload ? 'Showing results for YOUR uploaded logs: ' : 'Showing the synthetic DEMO simulation '}</strong>
+                      {isUpload
+                        ? `${(current.files || []).join(', ')} · ${(current.stats?.lines_total ?? 0).toLocaleString()} lines · ${current.stats?.incidents ?? 0} incident(s)`
+                        : `(attack scenarios S1–S5 hidden in 3 days of normal traffic) · ${(current.stats?.lines_total ?? 0).toLocaleString()} lines`}
+                    </div>
+                  </div>
+                );
+              })()}
               {/* 1. Hero Card — Exact Reference Match: warm wave background, left text, right CTA */}
               <div
                 className="glass-panel"
@@ -1071,8 +1093,8 @@ export default function App() {
                 {/* Right CTA Button — pill shape with play icon, matches reference */}
                 <div style={{ position: 'relative', zIndex: 2, flexShrink: 0 }}>
                   <button
-                    onClick={handleRunSimulation}
-                    disabled={simulating}
+                    onClick={() => setActiveTab('upload')}
+                    disabled={busy}
                     style={{
                       background: 'linear-gradient(135deg, #FF7733 0%, #EE3311 100%)',
                       color: '#FFFFFF',
@@ -1093,7 +1115,7 @@ export default function App() {
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(238, 68, 24, 0.40), 0 2px 6px rgba(238, 68, 24, 0.18)'; }}
                   >
                     {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={15} fill="#ffffff" />}
-                    <span>{simulating ? 'Running Simulation...' : 'Run Live Attack Simulation'}</span>
+                    <span>{simulating ? 'Running Simulation...' : uploading ? 'Analyzing Logs...' : 'Analyze Logs / Run Demo'}</span>
                     <ArrowRight size={15} strokeWidth={2.5} />
                   </button>
                 </div>
@@ -2890,8 +2912,48 @@ export default function App() {
               <div style={{ marginBottom: '22px', textAlign: 'center' }}>
                 <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#111827' }}>Run Detection & Simulation</h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '4px' }}>
-                  Inject synthetic multi-stage attack scenarios into 3-day baseline traffic or upload logs.
+                  Analyze your own server logs, or run the built-in demo with known attacks.
                 </p>
+              </div>
+
+              {/* Log Upload Card - primary action */}
+              <div className="glass-panel" style={{ padding: '24px', marginBottom: '20px', borderLeft: '4px solid #16A34A' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <Upload size={18} color="#16A34A" />
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
+                    1. Analyze your own log files
+                  </h3>
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginBottom: '14px' }}>
+                  Linux auth.log (SSH / sudo), Apache / Nginx access.log, or JSON-lines logs. You can select several files at once.
+                </p>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  disabled={busy}
+                  style={{
+                    padding: '12px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.6)',
+                    border: '1px dashed var(--border-medium)', color: 'var(--text-secondary)', width: '100%',
+                    cursor: busy ? 'not-allowed' : 'pointer', marginBottom: '12px',
+                  }}
+                />
+                {pendingFiles.length > 0 && (
+                  <div style={{ fontSize: '0.8rem', color: '#374151', marginBottom: '12px' }}>
+                    {pendingFiles.map(f => (
+                      <div key={f.name}>{f.name} <span style={{ color: 'var(--text-muted)' }}>({(f.size / 1024).toFixed(1)} KB)</span></div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  className="btn-peach"
+                  onClick={() => handleFileUpload()}
+                  disabled={busy || pendingFiles.length === 0}
+                  style={{ width: '100%', padding: '12px', background: '#16A34A', opacity: (busy || pendingFiles.length === 0) ? 0.55 : 1, cursor: (busy || pendingFiles.length === 0) ? 'not-allowed' : 'pointer' }}
+                >
+                  {uploading ? <RefreshCw className="animate-spin" size={16} /> : <Upload size={16} />}
+                  <span>{uploading ? 'Analyzing your logs...' : pendingFiles.length ? `Analyze ${pendingFiles.length} file(s)` : 'Choose log files first'}</span>
+                </button>
               </div>
 
               {/* Simulation Configuration Card */}
@@ -2899,20 +2961,20 @@ export default function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                   <Crosshair size={20} color="#EA580C" />
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>
-                    Interactive Attack Simulator (Ground-Truth Labels)
+                    2. Or run the demo simulation (synthetic data)
                   </h3>
                 </div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginBottom: '16px' }}>
-                  Select scenarios to inject into 3-day baseline traffic. The engine will parse, build baselines, run detection rules, and generate evaluation metrics:
+                  Generates 3 days of normal traffic with the selected attacks hidden inside, then scores detection against the known answers. This does NOT use your uploaded files.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '22px' }}>
                   {[
-                    { id: 'S1', title: 'SSH Compromise with Backdoor (S1)', desc: 'Brute-force SSH, deploy backdoor cron, exfiltrate data' },
-                    { id: 'S2', title: 'Password Spraying Attack (S2)', desc: 'Distributed authentication attempts across multiple users' },
-                    { id: 'S3', title: 'Web Recon -> SQLi -> Exfiltration (S3)', desc: 'Vulnerability scanning followed by SQL injection' },
-                    { id: 'S4', title: 'Low-and-Slow Subnet Distributed (S4)', desc: 'Slow port-knocking and lateral movement under threshold' },
-                    { id: 'S5', title: 'Insider Off-Hours Sudo & Download (S5)', desc: 'Authorized employee performing off-hours sudo elevation' },
+                    { id: 'S1', title: 'SSH Compromise with Backdoor (S1)', desc: 'SSH brute force → login as deploy → sudo → backdoor account sysupdate created' },
+                    { id: 'S2', title: 'Password Spraying Attack (S2)', desc: 'One IP tries 12 accounts × 2 passwords; user05 is compromised' },
+                    { id: 'S3', title: 'Web Recon -> SQLi -> Exfiltration (S3)', desc: 'gobuster 404 scan → SQL injection → 80 MB download' },
+                    { id: 'S4', title: 'Low-and-Slow Subnet Distributed (S4)', desc: '3 IPs in one /24 subnet, 24 slow failed logins over 6 hours' },
+                    { id: 'S5', title: 'Insider Off-Hours Sudo & Download (S5)', desc: 'user15 logs in at 03:10 from a new IP → sudo → 75 MB download' },
                   ].map(s => (
                     <label 
                       key={s.id} 
@@ -2945,41 +3007,14 @@ export default function App() {
                 <button 
                   className="btn-peach" 
                   onClick={handleRunSimulation} 
-                  disabled={simulating}
+                  disabled={busy}
                   style={{ width: '100%', padding: '12px' }}
                 >
                   {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} fill="#FFFFFF" />}
-                  <span>{simulating ? 'Generating & Analyzing Dataset...' : 'Generate Synthetic Traffic & Correlate Attack Chains'}</span>
+                  <span>{simulating ? 'Generating & Analyzing Dataset...' : 'Run Demo Simulation (synthetic logs)'}</span>
                 </button>
               </div>
 
-              {/* Log Upload Card */}
-              <div className="glass-panel" style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <Upload size={18} color="#EA580C" />
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
-                    Upload Custom Server Logs
-                  </h3>
-                </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginBottom: '14px' }}>
-                  Ingest raw Linux auth.log, NGINX access.log, or syslog files.
-                </p>
-
-                <input 
-                  type="file" 
-                  multiple 
-                  onChange={handleFileUpload}
-                  style={{
-                    padding: '12px',
-                    borderRadius: '8px',
-                    background: 'rgba(255, 255, 255, 0.6)',
-                    border: '1px dashed var(--border-medium)',
-                    color: 'var(--text-secondary)',
-                    width: '100%',
-                    cursor: 'pointer',
-                  }}
-                />
-              </div>
             </div>
           )}
 
