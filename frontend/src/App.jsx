@@ -198,7 +198,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview'); // overview, incidents, incident-detail, entities, evaluation, upload
   const [useMocks, setUseMocks] = useState(false);
   const [backendAlive, setBackendAlive] = useState(false);
-  const [analysisId, setAnalysisId] = useState(() => localStorage.getItem('chaintrace_analysis_id') || '');
+  const [analysisId, setAnalysisId] = useState('');   // every page load starts empty
   const [analyses, setAnalyses] = useState([]);
   
   // Data states
@@ -213,6 +213,8 @@ export default function App() {
   const [successMsg, setSuccessMsg] = useState(null);
   const [copiedText, setCopiedText] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
   const [engineConfig, setEngineConfig] = useState(null);
 
   // Fetch engine configuration thresholds
@@ -228,13 +230,14 @@ export default function App() {
   // Dismiss settings on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && showSettings) {
+      if (e.key === 'Escape') {
         setShowSettings(false);
+        setShowDocs(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSettings]);
+  }, [showSettings, showDocs]);
 
   // Simulation controls
   const [selectedScenarios, setSelectedScenarios] = useState({
@@ -335,13 +338,12 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setAnalyses(data);
-        if (data.length > 0) {
-          const storedId = preferredId || localStorage.getItem('chaintrace_analysis_id') || analysisId;
-          const matched = data.find(a => a.id === storedId);
-          const targetId = matched ? matched.id : data[0].id;
-          setAnalysisId(targetId);
-          localStorage.setItem('chaintrace_analysis_id', targetId);
-          await loadAnalysisData(targetId);
+        // Only open an analysis the user just created or picked. A fresh page load starts empty
+        // (no results appear before the user uploads logs); older analyses stay in the Dataset menu.
+        const matched = preferredId ? data.find(a => a.id === preferredId) : null;
+        if (matched) {
+          setAnalysisId(matched.id);
+          await loadAnalysisData(matched.id);
         } else {
           // Backend is alive, but 0 analyses yet
           setAnalysisId('');
@@ -784,24 +786,6 @@ export default function App() {
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          {/* User Profile Avatar */}
-          <div style={{
-            width: '34px',
-            height: '34px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%)',
-            border: '1px solid rgba(234, 88, 12, 0.4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '0.84rem',
-            fontWeight: 800,
-            color: '#7C2D12',
-            boxShadow: '0 2px 6px rgba(234, 88, 12, 0.18)',
-            flexShrink: 0,
-          }}>
-            M
-          </div>
         </div>
       </header>
 
@@ -907,7 +891,7 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => window.open('https://github.com/Mahadev2212/FIND_INTRUDER#readme', '_blank')}
+                onClick={() => setShowDocs(true)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1715,16 +1699,18 @@ export default function App() {
                         borderRadius: '4px',
                         letterSpacing: '0.04em',
                       }}>
-                        {incidents && incidents.length > 0 ? 'HIGHEST PRIORITY ATTACK' : 'BASELINE VERIFIED'}
+                        {incidents && incidents.length > 0 ? 'HIGHEST PRIORITY ATTACK' : (analysisId ? 'BASELINE VERIFIED' : 'NO DATA YET')}
                       </span>
                       <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
-                        {incidents && incidents[0] ? incidents[0].title : 'No Active Threat Incidents'}
+                        {incidents && incidents[0] ? incidents[0].title : (analysisId ? 'No Active Threat Incidents' : 'No logs analyzed yet')}
                       </h3>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       {incidents && incidents[0] 
                         ? (incidents[0].summary || 'Assessment: likely security threat.') 
-                        : 'All parsed log records processed without triggering correlated multi-stage attack chains.'}
+                        : (analysisId
+                          ? 'All parsed log records processed without triggering correlated multi-stage attack chains.'
+                          : 'Upload your server logs (auth.log, access.log or JSON-lines) to detect attacks.')}
                     </div>
                   </div>
                 </div>
@@ -1743,11 +1729,11 @@ export default function App() {
                     letterSpacing: '0.04em',
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
                   }}>
-                    {incidents && incidents[0] ? (incidents[0].level ? incidents[0].level.toUpperCase() : 'CRITICAL') : 'CLEAN'}
+                    {incidents && incidents[0] ? (incidents[0].level ? incidents[0].level.toUpperCase() : 'CRITICAL') : (analysisId ? 'CLEAN' : 'WAITING')}
                   </span>
 
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                    {incidents && incidents[0]?.start ? new Date(incidents[0].start).toLocaleString() : 'Live Baseline'}
+                    {incidents && incidents[0]?.start ? new Date(incidents[0].start).toLocaleString() : (analysisId ? 'No incidents' : '')}
                   </span>
 
                   {incidents && incidents.length > 0 ? (
@@ -1790,7 +1776,7 @@ export default function App() {
                       className="btn-peach"
                       style={{ padding: '8px 18px', fontSize: '0.84rem' }}
                     >
-                      <span>Simulate Attack</span>
+                      <span>{analysisId ? 'Analyze More Logs' : 'Upload Logs'}</span>
                       <ArrowRight size={14} strokeWidth={2.4} />
                     </button>
                   )}
@@ -2982,6 +2968,19 @@ export default function App() {
                 </button>
               </div>
 
+              {/* Demo simulation: hidden by default so it is never confused with real results */}
+              <button
+                onClick={() => setShowDemo(v => !v)}
+                style={{
+                  width: '100%', padding: '12px 16px', marginBottom: showDemo ? '14px' : 0, borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.55)', border: '1px dashed var(--border-medium)',
+                  color: 'var(--text-secondary)', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                {showDemo ? '▾ Hide demo simulation' : '▸ Show demo simulation (synthetic test data with known attacks – for testing / judges)'}
+              </button>
+              {showDemo && (
+                <>
               {/* Simulation Configuration Card */}
               <div className="glass-panel" style={{ padding: '26px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
@@ -3041,6 +3040,8 @@ export default function App() {
                 </button>
               </div>
 
+                </>
+              )}
             </div>
           )}
 
@@ -3057,11 +3058,84 @@ export default function App() {
         color: 'var(--text-muted)',
       }}>
         <div>ChainTrace v1.2.0 · ALGOTHON'26 · Problem Statement ALG-CYBER-01</div>
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <span>Detection Engine: <strong>Bhanu Prasad</strong></span>
-          <span>Frontend & Simulation: <strong>Mahadev H</strong></span>
-        </div>
       </footer>
+
+
+      {/* ─── DOCUMENTATION MODAL ───────────────────────────────────────────── */}
+      {showDocs && (
+        <div
+          onClick={() => setShowDocs(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(17, 24, 39, 0.35)', backdropFilter: 'blur(4px)',
+                   display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
+        >
+          <div
+            className="glass-panel"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '760px', maxHeight: '85vh', overflowY: 'auto', padding: '26px 28px',
+                     background: 'rgba(255, 251, 247, 0.98)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <BookOpen size={20} color="#EA580C" /> How to use ChainTrace
+              </h2>
+              <button onClick={() => setShowDocs(false)} className="btn-peach" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>Close</button>
+            </div>
+
+            <div style={{ fontSize: '0.86rem', color: '#374151', lineHeight: 1.6 }}>
+              <h3 style={{ fontWeight: 800, color: '#111827', margin: '10px 0 6px' }}>1. Analyze your logs</h3>
+              <p>Open <strong>Simulate &amp; Ingest</strong> → <strong>Analyze your own log files</strong> → choose one or more files → <strong>Analyze</strong>.
+                 Files are auto-detected; corrupted lines are skipped and counted.</p>
+              <ul style={{ margin: '6px 0 0 18px' }}>
+                <li><strong>Linux auth.log</strong> (SSH logins, sudo, useradd) – e.g. <code>Oct  4 02:03:11 web01 sshd[2211]: Failed password for root from 1.2.3.4 port 51122 ssh2</code></li>
+                <li><strong>Apache / Nginx access.log</strong> (combined format)</li>
+                <li><strong>JSON-lines</strong> – one JSON object per line with <code>timestamp</code>, <code>src_ip</code>, <code>user</code>, <code>event</code></li>
+              </ul>
+
+              <h3 style={{ fontWeight: 800, color: '#111827', margin: '16px 0 6px' }}>2. Read the results</h3>
+              <ul style={{ margin: '0 0 0 18px' }}>
+                <li><strong>Overview</strong> – lines parsed, alerts, attacks found and the riskiest IPs / users. The banner says whether you are looking at your upload or the demo.</li>
+                <li><strong>Incidents</strong> – related alerts grouped into one attack, ranked by risk (0–100).</li>
+                <li><strong>Attack story</strong> – step-by-step timeline mapped to MITRE ATT&amp;CK; click <em>Evidence</em> to see the exact raw log lines. Export as Markdown or JSON.</li>
+                <li><strong>Entities</strong> – every suspicious IP and account with its risk score.</li>
+                <li><strong>Evaluation</strong> – precision / recall; only for the demo simulation, because it needs known answers.</li>
+              </ul>
+
+              <h3 style={{ fontWeight: 800, color: '#111827', margin: '16px 0 6px' }}>3. What is detected (rules R1–R11)</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <tbody>
+                  {[
+                    ['R1', 'SSH brute force', '≥10 failed logins from one IP in 5 min'],
+                    ['R2', 'Password spraying', 'one IP fails for ≥5 different users in 10 min'],
+                    ['R3', 'Low-and-slow', '≥15 failures over 6 h from one /24 subnet'],
+                    ['R4', 'Login after failures', 'successful login from an IP with ≥5 recent failures'],
+                    ['R5', 'Off-hours login', 'login outside the user\'s normal hours'],
+                    ['R6', 'New source IP', 'login from an IP never seen for that user'],
+                    ['R7', 'Privilege use', 'sudo / su within 60 min of a suspicious login'],
+                    ['R8', 'Account created', 'useradd, or user added to sudo / wheel'],
+                    ['R9', 'Web scanning', '≥30 HTTP 404s in 5 min or scanner user-agent'],
+                    ['R10', 'Web attack payload', 'SQLi / XSS / path traversal / command injection signature'],
+                    ['R11', 'Large data transfer', '>50 MB of HTTP responses to one IP in 10 min'],
+                  ].map(([id, name, logic]) => (
+                    <tr key={id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '5px 8px', fontWeight: 800, color: '#EA580C' }}>{id}</td>
+                      <td style={{ padding: '5px 8px', fontWeight: 700 }}>{name}</td>
+                      <td style={{ padding: '5px 8px' }}>{logic}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <h3 style={{ fontWeight: 800, color: '#111827', margin: '16px 0 6px' }}>4. Demo simulation</h3>
+              <p>Optional. Generates 3 days of synthetic normal traffic with chosen attacks (S1–S5) hidden inside, so detection can be
+                 scored against known answers. It never uses or changes your uploaded files.</p>
+
+              <h3 style={{ fontWeight: 800, color: '#111827', margin: '16px 0 6px' }}>5. API</h3>
+              <p>Interactive API reference: <a href="/docs" target="_blank" rel="noreferrer" style={{ color: '#EA580C', fontWeight: 700 }}>/docs</a>.
+                 Detection is deterministic – no AI guessing; every alert links to the raw log lines that triggered it.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── SETTINGS MODAL DIALOG ─────────────────────────────────────────── */}
       {showSettings && (
