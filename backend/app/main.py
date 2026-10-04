@@ -14,7 +14,7 @@ from typing import List
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 from app.db import StorageUnavailable, make_store
 from app.schemas import AnalysisResponse, SimulateRequest
@@ -164,7 +164,7 @@ def get_evaluation(analysis_id: str):
 
 
 # ─── Frontend build (production): one service, one URL ────────────────────────
-if FRONTEND_DIST.exists():
+if (FRONTEND_DIST / "index.html").exists():
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
         if path.startswith("api/"):
@@ -173,6 +173,10 @@ if FRONTEND_DIST.exists():
         if path and file.is_file() and FRONTEND_DIST.resolve() in file.parents:
             return FileResponse(file)
         return FileResponse(FRONTEND_DIST / "index.html")  # client-side routes
+else:
+    @app.get("/", include_in_schema=False)
+    def root():
+        return RedirectResponse("/docs")  # no frontend build yet: show the API docs
 
 
 if __name__ == "__main__":

@@ -54,3 +54,12 @@ def test_story_timestamps_match_the_moment_described(setup):
     assert login["ts"].startswith("2026-10-04T02:41") and "At 02:41" in login["text"]
     times = [s["ts"] for s in d["story"]]
     assert times == sorted(times)
+
+
+def test_root_redirects_to_docs_without_frontend_build(setup):
+    c, _ = setup
+    r = c.get("/", follow_redirects=False)
+    if (main.FRONTEND_DIST / "index.html").exists():
+        assert r.status_code == 200
+    else:
+        assert r.status_code in (302, 307) and r.headers["location"] == "/docs"
