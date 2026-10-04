@@ -1,12 +1,13 @@
 """
 ChainTrace – Log Parsers
-Supports: Linux auth.log (syslog format) + Apache/Nginx combined access.log.
+Supports: Linux auth.log (syslog format), Apache/Nginx combined access.log, and JSON-lines logs.
 Format is auto-detected. Malformed lines are skipped and counted, never crash.
 Events from all files are merged and sorted by timestamp.
 Owner: Bhanu Prasad
 """
 
 import ipaddress
+import json
 import re
 from functools import lru_cache
 from dataclasses import dataclass, field
@@ -16,16 +17,22 @@ from typing import List, Optional, Tuple
 from app.schemas import Event, EventType, EventSource, HttpFields
 from engine.config import CFG
 
-SUPPORTED_FORMATS = "Linux auth.log (syslog: 'Oct  4 02:03:11 host sshd[123]: ...') and Apache/Nginx combined access.log"
+SUPPORTED_FORMATS = (
+    "Linux auth.log (syslog: 'Oct  4 02:03:11 host sshd[123]: ...'), "
+    "Apache/Nginx combined access.log, "
+    "and JSON-lines logs (one JSON object per line with keys: "
+    "timestamp|ts|time|@timestamp, src_ip|ip|client_ip|remote_addr, "
+    "user|username, event|type|action)"
+)
 
-# ─── Auth.log parser ──────────────────────────────────────────────────────────
+# --- Auth.log parser ----------------------------------------------------------
 
 # Syslog format: Oct  4 02:03:11 hostname process[pid]: message
 AUTH_SYSLOG_RE = re.compile(
-    r'^([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\s+'  # timestamp (no year)
-    r'(\S+)\s+'                                                   # hostname
-    r'([^\s:\[]+)(?:\[\d+\])?:\s?'                                # process[pid]
-    r'(.*)$'                                                      # message
+    r'^([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\s+'
+    r'(\S+)\s+'
+    r'([^\s:\[]+)(?:\[\d+\])?:\s?'
+    r'(.*)$'
 )
 MONTHS = {m: i for i, m in enumerate(
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], start=1)}
@@ -38,16 +45,16 @@ SU_RE = re.compile(r'session opened for user (\S+?)(?:\(uid=\d+\))? by (\S+?)(?:
 USERADD_RE = re.compile(r'new user: name=([^,\s]+)')
 GROUP_ADD_RE = re.compile(r"add(?:ing)? (?:user )?'?([^'\s]+)'? to (?:shadow )?group '?(sudo|wheel|admin)'?", re.IGNORECASE)
 
-# ─── Access.log (combined format) parser ──────────────────────────────────────
+# --- Access.log (combined format) parser -------------------------------------
 
 ACCESS_COMBINED_RE = re.compile(
-    r'^(\S+)\s+\S+\s+\S+'                   # IP, ident, user
-    r'\s+\[([^\]]+)\]'                      # [datetime]
-    r'\s+"(\S+)\s+(.+?)(?:\s+(HTTP/[\d.]+))?"'  # "METHOD path HTTP/ver" (path may contain spaces)
-    r'\s+(\d{3})'                           # status
-    r'\s+(\d+|-)'                           # bytes
-    r'(?:\s+"(?:[^"\\]|\\.)*")?'            # referer (optional)
-    r'(?:\s+"((?:[^"\\]|\\.)*)")?'          # user-agent (optional)
+    r'^(\S+)\s+\S+\s+\S+'
+    r'\s+\[([^\]]+)\]'
+    r'\s+"(\S+)\s+(.+?)(?:\s+(HTTP/[\d.]+))?"'
+    r'\s+(\d{3})'
+    r'\s+(\d+|-)'
+    r'(?:\s+"(?:[^"\\]|\\.)*")?'
+    r'(?:\s+"((?:[^"\\]|\\.)*)")?'
 )
 
 
@@ -74,7 +81,7 @@ def _clean_ip(value: Optional[str]) -> Optional[str]:
 def parse_auth_log(content: str, filename: str, year: Optional[int] = None) -> ParseResult:
     """
     Parse auth.log content. Syslog has no year: start at `year` (config default) and
-    bump the year whenever time jumps backwards by more than 180 days (Dec → Jan rollover).
+    bump the year whenever time jumps backwards by more than 180 days (Dec - Jan rollover).
     Timestamps are interpreted in the configured timezone offset and converted to UTC.
     """
     year = year or CFG["parsing"]["default_year"]
@@ -183,9 +190,172 @@ def parse_access_log(content: str, filename: str) -> ParseResult:
     return res
 
 
+# --- JSON-lines parser (Task A2) ----------------------------------------------
+
+_JSONL_TS_KEYS = ("timestamp", "ts", "time", "@timestamp")
+_JSONL_IP_KEYS = ("src_ip", "ip", "client_ip", "remote_addr")
+_JSONL_USER_KEYS = ("user", "username")
+_JSONL_EVENT_KEYS = ("event", "type", "action")
+
+_JSONL_EVENT_MAP = {
+    "ssh_fail": EventType.SSH_FAIL,
+    "ssh_failure": EventType.SSH_FAIL,
+    "failed": EventType.SSH_FAIL,
+    "ssh_success": EventType.SSH_SUCCESS,
+    "accepted": EventType.SSH_SUCCESS,
+    "ssh_accepted": EventType.SSH_SUCCESS,
+    "invalid_user": EventType.INVALID_USER,
+    "invalid": EventType.INVALID_USER,
+    "sudo": EventType.SUDO,
+    "sudo_command": EventType.SUDO,
+    "user_add": EventType.USER_ADD,
+    "useradd": EventType.USER_ADD,
+    "new_user": EventType.USER_ADD,
+    "group_add": EventType.GROUP_ADD,
+    "groupadd": EventType.GROUP_ADD,
+    "new_group": EventType.GROUP_ADD,
+    "http_request": EventType.HTTP_REQUEST,
+    "http": EventType.HTTP_REQUEST,
+    "request": EventType.HTTP_REQUEST,
+    "get": EventType.HTTP_REQUEST,
+    "post": EventType.HTTP_REQUEST,
+    "put": EventType.HTTP_REQUEST,
+    "delete": EventType.HTTP_REQUEST,
+}
+
+
+def _jsonl_get(obj: dict, keys: tuple) -> Optional[str]:
+    """Return the first matching value from obj for any of the given keys."""
+    for k in keys:
+        if k in obj:
+            return obj[k]
+    return None
+
+
+def _jsonl_parse_ts(raw_ts) -> Optional[datetime]:
+    """
+    Parse a timestamp from a JSON value.
+    Accepts: ISO-8601 strings, epoch seconds (int/float), epoch milliseconds (int > 1e12).
+    Always returns UTC datetime.
+    """
+    if raw_ts is None:
+        return None
+    try:
+        if isinstance(raw_ts, (int, float)):
+            epoch = float(raw_ts)
+            if epoch > 1e12:
+                epoch /= 1000.0
+            return datetime.fromtimestamp(epoch, tz=timezone.utc)
+        raw_ts = str(raw_ts).strip()
+        raw_ts = raw_ts.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(raw_ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except (ValueError, OSError, OverflowError):
+        return None
+
+
+def parse_jsonl_log(content: str, filename: str) -> ParseResult:
+    """
+    Parse a JSON-lines log: one JSON object per line.
+
+    Accepted key aliases:
+      timestamp  : timestamp | ts | time | @timestamp  (ISO-8601 or epoch seconds/ms)
+      ip         : src_ip | ip | client_ip | remote_addr
+      user       : user | username
+      event type : event | type | action  mapped to EventType values
+      http       : method, path|url, status, bytes, user_agent|ua
+
+    Bad JSON lines are skipped and counted in res.skipped. Never crashes.
+    Event id is "<filename>:<line_no>" and raw is the original line.
+    """
+    res = ParseResult(fmt="jsonl")
+
+    for lineno, raw_line in enumerate(content.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        res.lines_total += 1
+
+        try:
+            obj = json.loads(line)
+            if not isinstance(obj, dict):
+                res.skipped += 1
+                continue
+        except json.JSONDecodeError:
+            res.skipped += 1
+            continue
+
+        raw_ts = _jsonl_get(obj, _JSONL_TS_KEYS)
+        ts = _jsonl_parse_ts(raw_ts)
+        if ts is None:
+            res.skipped += 1
+            continue
+
+        raw_event = _jsonl_get(obj, _JSONL_EVENT_KEYS)
+        if raw_event is None:
+            res.skipped += 1
+            continue
+        event_type = _JSONL_EVENT_MAP.get(str(raw_event).lower().strip())
+        if event_type is None:
+            res.skipped += 1
+            continue
+
+        raw_ip = _jsonl_get(obj, _JSONL_IP_KEYS)
+        src_ip = _clean_ip(str(raw_ip)) if raw_ip is not None else None
+
+        raw_user = _jsonl_get(obj, _JSONL_USER_KEYS)
+        user = str(raw_user) if raw_user is not None else None
+
+        host = obj.get("host") or obj.get("hostname") or None
+        if host is not None:
+            host = str(host)
+
+        source = EventSource.WEB if event_type == EventType.HTTP_REQUEST else EventSource.AUTH
+
+        base = dict(
+            id=f"{filename}:{lineno}",
+            ts=ts,
+            source=source,
+            type=event_type,
+            src_ip=src_ip,
+            user=user,
+            host=host,
+            file=filename,
+            line_no=lineno,
+            raw=line,
+        )
+
+        http = None
+        if event_type == EventType.HTTP_REQUEST:
+            method = obj.get("method")
+            path = obj.get("path") or obj.get("url")
+            status = obj.get("status")
+            size = obj.get("bytes") or obj.get("size") or obj.get("response_size")
+            ua = obj.get("user_agent") or obj.get("ua")
+            http = HttpFields(
+                method=str(method) if method else None,
+                path=str(path) if path else None,
+                status=int(status) if status is not None else None,
+                bytes=int(size) if size is not None else None,
+                ua=str(ua) if ua else None,
+            )
+
+        res.parsed += 1
+        res.events.append(Event(**base, http=http))
+
+    return res
+
+
+# --- Format detection and dispatch -------------------------------------------
+
 def detect_format(content: str, sample_size: int = 50) -> Optional[str]:
-    """Vote over the first non-empty lines so a few malformed lines at the top don't break detection."""
-    auth = access = 0
+    """
+    Vote over the first non-empty lines so a few malformed lines at the top do not break detection.
+    Supports 'auth', 'access', and 'jsonl' formats.
+    """
+    auth = access = jsonl = 0
     seen = 0
     for line in content.splitlines():
         line = line.strip()
@@ -196,10 +366,20 @@ def detect_format(content: str, sample_size: int = 50) -> Optional[str]:
             auth += 1
         elif ACCESS_COMBINED_RE.match(line):
             access += 1
+        else:
+            try:
+                obj = json.loads(line)
+                if isinstance(obj, dict):
+                    jsonl += 1
+            except json.JSONDecodeError:
+                pass
         if seen >= sample_size:
             break
-    if auth == 0 and access == 0:
+    if auth == 0 and access == 0 and jsonl == 0:
         return None
+    best = max(auth, access, jsonl)
+    if best == jsonl and jsonl > auth and jsonl > access:
+        return "jsonl"
     return "auth" if auth >= access else "access"
 
 
@@ -212,7 +392,7 @@ def decode_upload(data: bytes, filename: str) -> str:
 
 def auto_detect_and_parse(content: str, filename: str) -> ParseResult:
     """
-    Auto-detect format (auth.log vs access.log) and parse.
+    Auto-detect format (auth.log vs access.log vs jsonl) and parse.
     Raises ValueError listing supported formats if unrecognised.
     """
     fmt = detect_format(content)
@@ -220,4 +400,6 @@ def auto_detect_and_parse(content: str, filename: str) -> ParseResult:
         return parse_auth_log(content, filename)
     if fmt == "access":
         return parse_access_log(content, filename)
+    if fmt == "jsonl":
+        return parse_jsonl_log(content, filename)
     raise ValueError(f"Unrecognised log format in '{filename}'. Supported formats: {SUPPORTED_FORMATS}.")
