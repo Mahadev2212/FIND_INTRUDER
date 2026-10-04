@@ -37,6 +37,14 @@ async def lifespan(_app: FastAPI):
             store.ensure_schema()  # schema.sql is idempotent (IF NOT EXISTS)
         except Exception as exc:  # DB down at boot must not stop the API; requests will return 503
             log.error("Could not apply schema.sql: %s", exc)
+    try:
+        if not store.list():
+            sim_res = run_simulation(["S1", "S2", "S3", "S4", "S5"])
+            seed_id = str(uuid.uuid4()) if store.kind == "postgres" else "demo-simulation"
+            store.save(seed_id, "simulation", sim_res)
+            log.info("Seeded initial analysis (%s)", seed_id)
+    except Exception as exc:
+        log.warning("Could not seed initial analysis: %s", exc)
     yield
 
 
@@ -60,6 +68,8 @@ def _save(source: str, result) -> dict:
 
 def _valid_id(analysis_id: str) -> str:
     """Analysis IDs are UUIDs; anything else is simply 'not found' (Postgres would raise a type error)."""
+    if analysis_id == "demo-simulation":
+        return analysis_id
     try:
         uuid.UUID(analysis_id)
     except ValueError:

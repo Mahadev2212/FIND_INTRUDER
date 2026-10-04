@@ -196,17 +196,17 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview'); // overview, incidents, incident-detail, entities, evaluation, upload
   const [useMocks, setUseMocks] = useState(false);
   const [backendAlive, setBackendAlive] = useState(false);
-  const [analysisId, setAnalysisId] = useState('demo-simulation');
+  const [analysisId, setAnalysisId] = useState(() => localStorage.getItem('chaintrace_analysis_id') || '');
   const [analyses, setAnalyses] = useState([]);
   
   // Data states
-  const [summary, setSummary] = useState(mockSummary);
-  const [incidents, setIncidents] = useState(mockIncidents);
+  const [summary, setSummary] = useState(null);
+  const [incidents, setIncidents] = useState([]);
   const [selectedIncidentId, setSelectedIncidentId] = useState(null);
-  const [incidentDetail, setIncidentDetail] = useState(mockIncidentDetail);
-  const [entities, setEntities] = useState(mockEntities);
-  const [evaluation, setEvaluation] = useState(mockEvaluation);
-  const [loading, setLoading] = useState(false);
+  const [incidentDetail, setIncidentDetail] = useState(null);
+  const [entities, setEntities] = useState([]);
+  const [evaluation, setEvaluation] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [copiedText, setCopiedText] = useState(null);
@@ -234,12 +234,31 @@ export default function App() {
     setTimeout(() => setCopiedText(null), 1800);
   };
 
-  // 1. Check backend health on mount
+  // Helper: Apply offline mock data
+  const applyMockData = () => {
+    setSummary(mockSummary);
+    setIncidents(mockIncidents);
+    setSelectedIncidentId(mockIncidents[0]?.id || 'inc-001');
+    setIncidentDetail(mockIncidentDetail);
+    setEntities(mockEntities);
+    setEvaluation(mockEvaluation);
+    setAnalyses([{
+      id: 'demo-simulation',
+      source: 'simulation',
+      stats: mockSummary.stats || { events: 5890, parsed: 5890, skipped: 0, alerts: 196, incidents: 10 },
+      created_at: new Date().toISOString()
+    }]);
+    setAnalysisId('demo-simulation');
+  };
+
+  // 1. Initial boot & periodic backend health check
   useEffect(() => {
-    checkHealth();
-    const interval = setInterval(checkHealth, 5000);
+    initApp();
+    const interval = setInterval(async () => {
+      await checkHealth();
+    }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [useMocks]);
 
   // Auto-dismiss success notification
   useEffect(() => {
@@ -254,74 +273,106 @@ export default function App() {
       const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         setBackendAlive(true);
+        return true;
       } else {
         setBackendAlive(false);
+        return false;
       }
     } catch {
       setBackendAlive(false);
+      return false;
     }
   }
 
-  // 2. Fetch analyses list
-  useEffect(() => {
-    if (useMocks || !backendAlive) {
-      setAnalyses([{ id: 'sia-01947f', source: 'simulation', stats: { events: 5890, parsed: 5890, skipped: 0, alerts: 196, incidents: 10 }, created_at: new Date().toISOString() }]);
-      return;
+  // App initialization on mount or mode change
+  async function initApp() {
+    setLoading(true);
+    const alive = await checkHealth();
+    if (alive && !useMocks) {
+      await fetchAnalyses();
+    } else {
+      applyMockData();
     }
-    fetchAnalyses();
-  }, [backendAlive, useMocks]);
+    setLoading(false);
+  }
 
-  async function fetchAnalyses() {
+  // 2. Fetch analyses list from backend and restore active analysis
+  async function fetchAnalyses(preferredId = null) {
     try {
       const res = await fetch(`${API_BASE}/analyses`);
       if (res.ok) {
         const data = await res.json();
         setAnalyses(data);
-        if (data.length > 0 && !analysisId) {
-          setAnalysisId(data[0].id);
+        if (data.length > 0) {
+          const storedId = preferredId || localStorage.getItem('chaintrace_analysis_id') || analysisId;
+          const matched = data.find(a => a.id === storedId);
+          const targetId = matched ? matched.id : data[0].id;
+          setAnalysisId(targetId);
+          localStorage.setItem('chaintrace_analysis_id', targetId);
+          await loadAnalysisData(targetId);
+        } else {
+          // Backend is alive, but 0 analyses yet
+          setAnalysisId('');
+          setSummary(null);
+          setIncidents([]);
+          setSelectedIncidentId(null);
+          setIncidentDetail(null);
+          setEntities([]);
+          setEvaluation(null);
         }
       }
     } catch (e) {
       console.warn("Failed fetching analyses:", e);
+      if (!useMocks) applyMockData();
     }
   }
 
-  // 3. Load active analysis data
-  useEffect(() => {
-    if (useMocks || !backendAlive) {
-      setSummary(mockSummary);
-      setIncidents(mockIncidents);
-      setEntities(mockEntities);
-      setEvaluation(mockEvaluation);
+  // 3. Load active analysis data by ID
+  async function loadAnalysisData(id) {
+    if (!id || id === 'demo-simulation') {
+      if (useMocks || !backendAlive) {
+        applyMockData();
+      }
       return;
     }
-    if (analysisId) {
-      loadAnalysisData(analysisId);
-    }
-  }, [analysisId, backendAlive, useMocks]);
-
-  async function loadAnalysisData(id) {
     setLoading(true);
     setErrorMsg(null);
     try {
       const sumRes = await fetch(`${API_BASE}/analyses/${id}/summary`);
-      if (sumRes.ok) setSummary(await sumRes.json());
+      if (sumRes.ok) {
+        setSummary(await sumRes.json());
+      } else {
+        throw new Error(`Summary not found (${sumRes.status})`);
+      }
 
       const incRes = await fetch(`${API_BASE}/analyses/${id}/incidents`);
       if (incRes.ok) {
         const incData = await incRes.json();
         setIncidents(incData);
-        if (incData.length > 0 && !selectedIncidentId) {
-          setSelectedIncidentId(incData[0].id);
+        if (incData.length > 0) {
+          const firstId = incData[0].id;
+          setSelectedIncidentId(firstId);
+          await fetchIncidentDetail(id, firstId);
+        } else {
+          setSelectedIncidentId(null);
+          setIncidentDetail(null);
         }
+      } else {
+        setIncidents([]);
+        setSelectedIncidentId(null);
+        setIncidentDetail(null);
       }
 
       const entRes = await fetch(`${API_BASE}/analyses/${id}/entities`);
       if (entRes.ok) setEntities(await entRes.json());
+      else setEntities([]);
 
       const evalRes = await fetch(`${API_BASE}/analyses/${id}/evaluation`);
-      if (evalRes.ok) setEvaluation(await evalRes.json());
-      else setEvaluation(null);
+      if (evalRes.ok) {
+        setEvaluation(await evalRes.json());
+      } else {
+        setEvaluation(null);
+      }
 
     } catch (err) {
       setErrorMsg("Failed to load analysis: " + err.message);
@@ -330,36 +381,49 @@ export default function App() {
     }
   }
 
-  async function handleRefresh() {
-    setLoading(true);
-    await checkHealth();
-    await fetchAnalyses();
-    if (analysisId) {
-      await loadAnalysisData(analysisId);
-    }
-    setLoading(false);
-  }
-
   // 4. Fetch single incident detail
-  useEffect(() => {
-    if (!selectedIncidentId) return;
-    if (useMocks || !backendAlive) {
+  async function fetchIncidentDetail(aid, incId) {
+    const targetAid = aid || analysisId;
+    const targetIncId = incId || selectedIncidentId;
+    if (!targetAid || !targetIncId) return;
+
+    if (useMocks || !backendAlive || targetAid === 'demo-simulation') {
       setIncidentDetail(mockIncidentDetail);
       return;
     }
-    fetchIncidentDetail(selectedIncidentId);
-  }, [selectedIncidentId, backendAlive, useMocks]);
 
-  async function fetchIncidentDetail(incId) {
     try {
-      const res = await fetch(`${API_BASE}/analyses/${analysisId}/incidents/${incId}`);
+      const res = await fetch(`${API_BASE}/analyses/${targetAid}/incidents/${targetIncId}`);
       if (res.ok) {
         const data = await res.json();
         setIncidentDetail(data);
+      } else {
+        console.warn(`Incident ${targetIncId} not found in analysis ${targetAid}`);
       }
     } catch (err) {
       console.error("Failed loading incident detail:", err);
     }
+  }
+
+  // Handle manual dataset selection from dropdown
+  async function handleSelectAnalysis(newId) {
+    setAnalysisId(newId);
+    localStorage.setItem('chaintrace_analysis_id', newId);
+    setSelectedIncidentId(null);
+    setIncidentDetail(null);
+    await loadAnalysisData(newId);
+  }
+
+  // Handle manual refresh button
+  async function handleRefresh() {
+    setLoading(true);
+    const alive = await checkHealth();
+    if (alive && !useMocks) {
+      await fetchAnalyses(analysisId);
+    } else {
+      applyMockData();
+    }
+    setLoading(false);
   }
 
   // 5. Run simulation trigger
@@ -377,6 +441,7 @@ export default function App() {
 
     if (useMocks || !backendAlive) {
       setTimeout(() => {
+        applyMockData();
         setSimulating(false);
         setSuccessMsg("✓ Simulation executed (offline mock mode). 4/5 scenarios detected.");
         setActiveTab('overview');
@@ -397,11 +462,13 @@ export default function App() {
       }
       
       const resp = await res.json();
-      await fetchAnalyses();
+      localStorage.setItem('chaintrace_analysis_id', resp.analysis_id);
       setAnalysisId(resp.analysis_id);
-      await loadAnalysisData(resp.analysis_id);
+      setSelectedIncidentId(null);
+      setIncidentDetail(null);
+      await fetchAnalyses(resp.analysis_id);
       
-      setSuccessMsg(`✓ Attack campaign simulation completed! Ingested ${resp.stats?.events || 5890} events across ${chosen.join(', ')}.`);
+      setSuccessMsg(`✓ Attack campaign simulation completed! Ingested ${resp.stats?.events ?? 5890} events across ${chosen.join(', ')}.`);
       setActiveTab('overview');
     } catch (err) {
       setErrorMsg("Simulation failed: " + err.message);
@@ -410,7 +477,7 @@ export default function App() {
     }
   }
 
-  // Upload logs trigger
+  // 6. Upload logs trigger
   async function handleFileUpload(e) {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -426,12 +493,17 @@ export default function App() {
         method: 'POST',
         body: formData,
       });
-      if (!res.ok) throw new Error((await res.json()).detail || "Analysis failed");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Analysis failed");
+      }
       const resp = await res.json();
-      await fetchAnalyses();
+      localStorage.setItem('chaintrace_analysis_id', resp.analysis_id);
       setAnalysisId(resp.analysis_id);
-      await loadAnalysisData(resp.analysis_id);
-      setSuccessMsg(`✓ Upload analyzed! Detected ${resp.stats?.incidents || 0} incidents.`);
+      setSelectedIncidentId(null);
+      setIncidentDetail(null);
+      await fetchAnalyses(resp.analysis_id);
+      setSuccessMsg(`✓ Upload analyzed! Detected ${resp.stats?.incidents ?? 0} incidents across ${resp.stats?.events ?? 0} events.`);
       setActiveTab('overview');
     } catch (err) {
       setErrorMsg("Log upload failed: " + err.message);
@@ -469,17 +541,17 @@ export default function App() {
     { time: '18:00', count: 50 },
   ];
 
-  const chartData = (summary?.events_over_time && summary.events_over_time.length > 3)
+  const chartData = (summary?.events_over_time && summary.events_over_time.length > 0)
     ? summary.events_over_time.map(d => ({
         time: formatTimeLabel(d.hour || d.time),
         count: d.count
       }))
-    : defaultChartData;
+    : (useMocks ? defaultChartData : [{ time: '00:00', count: 0 }]);
 
   const maxSpikeIndex = chartData.reduce((maxI, d, i, arr) => d.count > arr[maxI].count ? i : maxI, 0);
   const spikePercent = Math.max(15, Math.min(82, (maxSpikeIndex / Math.max(1, chartData.length - 1)) * 92));
-  const spikeTime = chartData[maxSpikeIndex]?.time || '02:00';
-  const spikeCount = chartData[maxSpikeIndex]?.count || 240;
+  const spikeTime = chartData[maxSpikeIndex]?.time || '00:00';
+  const spikeCount = chartData[maxSpikeIndex]?.count || 0;
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: Home },
@@ -601,7 +673,7 @@ export default function App() {
             </span>
             <select
               value={analysisId}
-              onChange={(e) => setAnalysisId(e.target.value)}
+              onChange={(e) => handleSelectAnalysis(e.target.value)}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -615,7 +687,7 @@ export default function App() {
             >
               {analyses.map(a => (
                 <option key={a.id} value={a.id} style={{ background: '#ffffff', color: '#111827' }}>
-                  {a.id} ({a.stats?.events || 5890} evts)
+                  {a.id.slice(0, 8)}... ({a.source === 'simulation' ? 'Sim' : 'Upload'} · {a.stats?.events ?? 0} evts · {a.stats?.incidents ?? 0} inc)
                 </option>
               ))}
             </select>
@@ -1052,10 +1124,10 @@ export default function App() {
                       LINES INGESTED
                     </div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
-                      {summary?.stats?.parsed ? summary.stats.parsed.toLocaleString() : '5,890'}
+                      {summary?.stats?.parsed !== undefined ? summary.stats.parsed.toLocaleString() : (summary?.stats?.lines_total !== undefined ? summary.stats.lines_total.toLocaleString() : (useMocks ? '5,890' : '0'))}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      {summary?.stats?.skipped !== undefined ? `${summary.stats.skipped} malformed skipped` : '0 malformed skipped'}
+                      {summary?.stats?.skipped !== undefined ? `${summary.stats.skipped} malformed skipped` : (useMocks ? '0 malformed skipped' : '0 skipped')}
                     </div>
                   </div>
                   <WaveformBars color="#EA580C" pattern={[4, 6, 8, 5, 10, 7, 12, 9, 14, 8, 6, 12, 16]} />
@@ -1089,10 +1161,10 @@ export default function App() {
                       EVENTS NORMALIZED
                     </div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
-                      {summary?.stats?.events ? summary.stats.events.toLocaleString() : '5,890'}
+                      {summary?.stats?.events !== undefined ? summary.stats.events.toLocaleString() : (useMocks ? '5,890' : '0')}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      Auth.log + Access.log
+                      {summary?.files && summary.files.length > 0 ? summary.files.join(' + ') : 'Auth.log + Access.log'}
                     </div>
                   </div>
                   <WaveformBars color="#16A34A" pattern={[5, 8, 12, 9, 14, 11, 7, 10, 13, 9, 12, 15, 18]} />
@@ -1126,7 +1198,7 @@ export default function App() {
                       ALERTS TRIGGERED
                     </div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
-                      {summary?.stats?.alerts ? summary.stats.alerts.toLocaleString() : '196'}
+                      {summary?.stats?.alerts !== undefined ? summary.stats.alerts.toLocaleString() : (useMocks ? '196' : '0')}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       Rules R1 - R11 without LLM
@@ -1163,7 +1235,7 @@ export default function App() {
                       CORRELATED ATTACKS
                     </div>
                     <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
-                      {incidents?.length || summary?.stats?.incidents || '10'}
+                      {(incidents && incidents.length !== undefined) ? incidents.length : (summary?.stats?.incidents !== undefined ? summary.stats.incidents : (useMocks ? 10 : 0))}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       Graph components
@@ -1199,12 +1271,25 @@ export default function App() {
                     <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       SCENARIOS DETECTED
                     </div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
-                      {evaluation?.scenarios_detected ?? 4}/{evaluation?.scenarios_total ?? 5}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      Benchmark proof
-                    </div>
+                    {evaluation ? (
+                      <>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
+                          {evaluation.scenarios_detected}/{evaluation.scenarios_total}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                          Ground-truth verified
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#16A34A', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
+                          Live Logs
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                          Real traffic ingest
+                        </div>
+                      </>
+                    )}
                   </div>
                   <WaveformBars color="#16A34A" pattern={[8, 11, 14, 9, 13, 15, 10, 12, 16, 9, 13, 16, 18]} />
                 </div>
@@ -1265,33 +1350,35 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Anomalous Spike Box Over Peak */}
-                  <div style={{
-                    position: 'absolute',
-                    left: `${spikePercent}%`,
-                    top: '16%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(255, 255, 255, 0.96)',
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(239, 68, 68, 0.45)',
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    boxShadow: '0 8px 24px rgba(239, 68, 68, 0.15), 0 2px 6px rgba(0,0,0,0.04)',
-                    zIndex: 10,
-                    pointerEvents: 'none',
-                    minWidth: '130px',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#DC2626', fontSize: '0.72rem', fontWeight: 800 }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444' }} />
-                      <span>Anomalous Spike</span>
+                  {/* Anomalous Spike Box Over Peak (shown only when peak count > 0) */}
+                  {spikeCount > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      left: `${spikePercent}%`,
+                      top: '16%',
+                      transform: 'translateX(-50%)',
+                      background: 'rgba(255, 255, 255, 0.96)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(239, 68, 68, 0.45)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      boxShadow: '0 8px 24px rgba(239, 68, 68, 0.15), 0 2px 6px rgba(0,0,0,0.04)',
+                      zIndex: 10,
+                      pointerEvents: 'none',
+                      minWidth: '130px',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#DC2626', fontSize: '0.72rem', fontWeight: 800 }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444' }} />
+                        <span>Peak Activity</span>
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {spikeTime} - Peak Window
+                      </div>
+                      <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#111827', marginTop: '1px' }}>
+                        ~ {spikeCount.toLocaleString()} events
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {spikeTime} - Peak Burst
-                    </div>
-                    <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#111827', marginTop: '1px' }}>
-                      ~ {spikeCount} events
-                    </div>
-                  </div>
+                  )}
 
                   {/* Recharts Area Chart */}
                   <div style={{ height: '240px', width: '100%' }}>
@@ -1317,8 +1404,7 @@ export default function App() {
                           stroke="#78716C" 
                           fontSize={11} 
                           tickLine={false} 
-                          axisLine={false}
-                          ticks={[0, 70, 140, 210, 280]} 
+                          axisLine={false} 
                         />
                         <Tooltip 
                           contentStyle={{ 
@@ -1408,80 +1494,113 @@ export default function App() {
                       <div style={{ textAlign: 'right' }}>TREND</div>
                     </div>
 
-                    {/* Table Rows (Matching Reference Mock) */}
+                    {/* Table Rows (Dynamically rendered from top_entities / entities) */}
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {[
-                        { val: '185.220.181.7', type: 'IP Address', score: 100, isIp: true },
-                        { val: '45.33.10.8', type: 'IP Address', score: 100, isIp: true },
-                        { val: 'deploy', type: 'User Account', score: 100, isIp: false },
-                        { val: '45.33.10.9', type: 'IP Address', score: 100, isIp: true },
-                        { val: '10.0.1.131', type: 'IP Address', score: 100, isIp: true },
-                      ].map((item, i) => (
-                        <div
-                          key={i}
-                          onClick={() => setActiveTab('entities')}
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1.65fr 1.15fr 0.8fr 0.5fr',
-                            gap: '8px',
-                            alignItems: 'center',
-                            padding: '10px 12px',
-                            borderBottom: i < 4 ? '1px solid rgba(220, 210, 195, 0.4)' : 'none',
-                            cursor: 'pointer',
-                            transition: 'background 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(234, 88, 12, 0.04)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                        >
-                          {/* Entity Identifier with Icon */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '4px',
-                              background: 'rgba(240, 230, 218, 0.8)',
-                              border: '1px solid rgba(215, 200, 180, 0.6)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'var(--text-secondary)',
-                              fontSize: '0.68rem',
-                              fontFamily: 'var(--font-mono)',
-                              fontWeight: 800,
-                            }}>
-                              {item.isIp ? 'P' : <Users size={11} />}
+                      {(() => {
+                        const topEntities = (summary?.top_entities && summary.top_entities.length > 0)
+                          ? summary.top_entities.slice(0, 5).map(e => ({
+                              val: e.value,
+                              type: e.type === 'ip' ? 'IP Address' : 'User Account',
+                              score: e.risk_score ?? 100,
+                              isIp: e.type === 'ip',
+                              level: e.level,
+                            }))
+                          : (entities && entities.length > 0)
+                            ? entities.slice(0, 5).map(e => ({
+                                val: e.value,
+                                type: e.type === 'ip' ? 'IP Address' : 'User Account',
+                                score: e.risk_score ?? 100,
+                                isIp: e.type === 'ip',
+                                level: e.level,
+                              }))
+                            : (useMocks
+                              ? [
+                                  { val: '185.220.101.7', type: 'IP Address', score: 100, isIp: true },
+                                  { val: '45.33.10.8', type: 'IP Address', score: 100, isIp: true },
+                                  { val: 'deploy', type: 'User Account', score: 100, isIp: false },
+                                  { val: '45.33.10.9', type: 'IP Address', score: 100, isIp: true },
+                                  { val: '172.16.5.20', type: 'IP Address', score: 100, isIp: true },
+                                ]
+                              : []);
+
+                        if (topEntities.length === 0) {
+                          return (
+                            <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                              No high-risk entities identified in current dataset.
                             </div>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600, color: '#111827' }}>
-                              {item.val}
-                            </span>
-                          </div>
+                          );
+                        }
 
-                          {/* Type */}
-                          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                            {item.type}
-                          </div>
+                        return topEntities.map((item, i) => (
+                          <div
+                            key={i}
+                            onClick={() => {
+                              setEntitySearch(item.val);
+                              setActiveTab('entities');
+                            }}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1.65fr 1.15fr 0.8fr 0.5fr',
+                              gap: '8px',
+                              alignItems: 'center',
+                              padding: '10px 12px',
+                              borderBottom: i < topEntities.length - 1 ? '1px solid rgba(220, 210, 195, 0.4)' : 'none',
+                              cursor: 'pointer',
+                              transition: 'background 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(234, 88, 12, 0.04)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            {/* Entity Identifier with Icon */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '4px',
+                                background: 'rgba(240, 230, 218, 0.8)',
+                                border: '1px solid rgba(215, 200, 180, 0.6)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--text-secondary)',
+                                fontSize: '0.68rem',
+                                fontFamily: 'var(--font-mono)',
+                                fontWeight: 800,
+                              }}>
+                                {item.isIp ? 'P' : <Users size={11} />}
+                              </div>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600, color: '#111827' }}>
+                                {item.val}
+                              </span>
+                            </div>
 
-                          {/* Risk Score Red Pill */}
-                          <div style={{ textAlign: 'center' }}>
-                            <span style={{
-                              background: '#EF4444',
-                              color: '#fff',
-                              fontSize: '0.72rem',
-                              fontWeight: 900,
-                              padding: '2px 8px',
-                              borderRadius: '9999px',
-                              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)',
-                            }}>
-                              {item.score}
-                            </span>
-                          </div>
+                            {/* Type */}
+                            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                              {item.type}
+                            </div>
 
-                          {/* Trend Sparkline Bars */}
-                          <div style={{ textAlign: 'right' }}>
-                            <SparklineBars />
+                            {/* Risk Score Red Pill */}
+                            <div style={{ textAlign: 'center' }}>
+                              <span style={{
+                                background: item.score >= 80 ? '#EF4444' : item.score >= 50 ? '#F59E0B' : '#16A34A',
+                                color: '#fff',
+                                fontSize: '0.72rem',
+                                fontWeight: 900,
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                boxShadow: item.score >= 80 ? '0 2px 6px rgba(239, 68, 68, 0.3)' : 'none',
+                              }}>
+                                {item.score}
+                              </span>
+                            </div>
+
+                            {/* Trend Sparkline Bars */}
+                            <div style={{ textAlign: 'right' }}>
+                              <SparklineBars />
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ));
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1492,8 +1611,10 @@ export default function App() {
                 className="glass-panel" 
                 style={{
                   padding: '18px 26px',
-                  border: '1px solid rgba(252, 165, 165, 0.70)',
-                  background: 'linear-gradient(90deg, rgba(254, 226, 226, 0.55) 0%, rgba(255, 241, 242, 0.42) 50%, rgba(255, 247, 237, 0.42) 100%)',
+                  border: `1px solid ${incidents && incidents.length > 0 ? 'rgba(252, 165, 165, 0.70)' : 'rgba(134, 239, 172, 0.70)'}`,
+                  background: incidents && incidents.length > 0 
+                    ? 'linear-gradient(90deg, rgba(254, 226, 226, 0.55) 0%, rgba(255, 241, 242, 0.42) 50%, rgba(255, 247, 237, 0.42) 100%)'
+                    : 'linear-gradient(90deg, rgba(240, 253, 244, 0.65) 0%, rgba(240, 253, 250, 0.5) 100%)',
                   boxShadow: '0 10px 32px rgba(220, 38, 38, 0.09), inset 0 1.5px 0 rgba(255, 255, 255, 0.95)',
                   backdropFilter: 'blur(28px) saturate(1.8)',
                   WebkitBackdropFilter: 'blur(28px) saturate(1.8)',
@@ -1505,100 +1626,116 @@ export default function App() {
                   gap: '16px',
                 }}
               >
-                {/* Left: Red Shield Icon + Info */}
+                {/* Left: Shield Icon + Info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{
                     width: '44px',
                     height: '44px',
                     borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #FF5555 0%, #DC2626 100%)',
+                    background: incidents && incidents.length > 0 
+                      ? 'linear-gradient(135deg, #FF5555 0%, #DC2626 100%)'
+                      : 'linear-gradient(135deg, #34D399 0%, #059669 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#FFFFFF',
-                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
+                    boxShadow: incidents && incidents.length > 0 ? '0 4px 14px rgba(220, 38, 38, 0.35)' : '0 4px 14px rgba(5, 150, 105, 0.35)',
                     flexShrink: 0,
                   }}>
-                    <ShieldAlert size={24} strokeWidth={2.4} />
+                    {incidents && incidents.length > 0 ? <ShieldAlert size={24} strokeWidth={2.4} /> : <Shield size={24} strokeWidth={2.4} />}
                   </div>
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '3px' }}>
                       <span style={{
-                        border: '1px solid rgba(239, 68, 68, 0.35)',
-                        background: 'rgba(239, 68, 68, 0.12)',
-                        color: '#DC2626',
+                        border: `1px solid ${incidents && incidents.length > 0 ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
+                        background: incidents && incidents.length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                        color: incidents && incidents.length > 0 ? '#DC2626' : '#059669',
                         fontSize: '0.68rem',
                         fontWeight: 800,
                         padding: '2px 8px',
                         borderRadius: '4px',
                         letterSpacing: '0.04em',
                       }}>
-                        HIGHEST PRIORITY ATTACK
+                        {incidents && incidents.length > 0 ? 'HIGHEST PRIORITY ATTACK' : 'BASELINE VERIFIED'}
                       </span>
                       <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
-                        {incidents && incidents[0] ? incidents[0].title : 'Successful credential attack'}
+                        {incidents && incidents[0] ? incidents[0].title : 'No Active Threat Incidents'}
                       </h3>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      Assessment: likely successful credential attack.
+                      {incidents && incidents[0] 
+                        ? (incidents[0].summary || 'Assessment: likely security threat.') 
+                        : 'All parsed log records processed without triggering correlated multi-stage attack chains.'}
                     </div>
                   </div>
                 </div>
 
-                {/* Right: Status Pill, Timestamp & Warm Action Button */}
+                {/* Right: Status Pill, Timestamp & Action Button */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <span style={{
-                    background: '#EF4444',
+                    background: incidents && incidents[0] 
+                      ? (incidents[0].level === 'high' ? '#F59E0B' : incidents[0].level === 'medium' ? '#EA580C' : '#EF4444') 
+                      : '#10B981',
                     color: '#ffffff',
                     fontSize: '0.74rem',
                     fontWeight: 900,
                     padding: '4px 14px',
                     borderRadius: '9999px',
                     letterSpacing: '0.04em',
-                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
                   }}>
-                    CRITICAL
+                    {incidents && incidents[0] ? (incidents[0].level ? incidents[0].level.toUpperCase() : 'CRITICAL') : 'CLEAN'}
                   </span>
 
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                    2024-10-04 02:17:32
+                    {incidents && incidents[0]?.start ? new Date(incidents[0].start).toLocaleString() : 'Live Baseline'}
                   </span>
 
-                  <button 
-                    onClick={() => {
-                      if (incidents && incidents[0]) {
+                  {incidents && incidents.length > 0 ? (
+                    <button 
+                      onClick={() => {
                         setSelectedIncidentId(incidents[0].id);
-                      }
-                      setActiveTab('incident-detail');
-                    }}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 18px',
-                      fontSize: '0.84rem',
-                      fontWeight: 700,
-                      borderRadius: '10px',
-                      background: 'rgba(255, 245, 235, 0.95)',
-                      border: '1px solid rgba(254, 215, 170, 0.9)',
-                      color: '#9A3412',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      boxShadow: '0 2px 6px rgba(234, 88, 12, 0.08)',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#ffffff';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(234, 88, 12, 0.18)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 245, 235, 0.95)';
-                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(234, 88, 12, 0.08)';
-                    }}
-                  >
-                    <span>Examine Story & Evidence</span>
-                    <ArrowRight size={14} strokeWidth={2.4} />
-                  </button>
+                        fetchIncidentDetail(analysisId, incidents[0].id);
+                        setActiveTab('incident-detail');
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 18px',
+                        fontSize: '0.84rem',
+                        fontWeight: 700,
+                        borderRadius: '10px',
+                        background: 'rgba(255, 245, 235, 0.95)',
+                        border: '1px solid rgba(254, 215, 170, 0.9)',
+                        color: '#9A3412',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: '0 2px 6px rgba(234, 88, 12, 0.08)',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#ffffff';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(234, 88, 12, 0.18)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 245, 235, 0.95)';
+                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(234, 88, 12, 0.08)';
+                      }}
+                    >
+                      <span>Examine Story & Evidence</span>
+                      <ArrowRight size={14} strokeWidth={2.4} />
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setActiveTab('upload')}
+                      className="btn-peach"
+                      style={{ padding: '8px 18px', fontSize: '0.84rem' }}
+                    >
+                      <span>Simulate Attack</span>
+                      <ArrowRight size={14} strokeWidth={2.4} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1740,143 +1877,295 @@ export default function App() {
           )}
 
           {/* ─── TAB: INCIDENT DETAIL (DEEP DIVE INVESTIGATION) ───────────────── */}
-          {activeTab === 'incident-detail' && incidentDetail && (
-            <div>
-              <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <button 
-                  onClick={() => setActiveTab('incidents')}
-                  style={{ background: 'transparent', border: 'none', color: '#EA580C', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700 }}
-                >
-                  ← Back to Incident List
-                </button>
-
-                <button 
-                  className="btn-glass"
-                  onClick={() => handleCopy(incidentDetail.id)}
-                  style={{ fontSize: '0.74rem', padding: '5px 12px' }}
-                >
-                  {copiedText === incidentDetail.id ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
-                  <span>{copiedText === incidentDetail.id ? 'Copied' : 'Copy Incident ID'}</span>
-                </button>
-              </div>
-
-              {/* Incident Header Card */}
-              <div className="glass-panel" style={{ padding: '24px 28px', marginBottom: '18px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                      <span style={{
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        background: 'rgba(239, 68, 68, 0.12)',
-                        color: '#DC2626',
-                        border: '1px solid rgba(239, 68, 68, 0.35)',
-                      }}>
-                        {incidentDetail.level} THREAT
-                      </span>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                        Incident #{incidentDetail.id}
-                      </span>
-                    </div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827' }}>
-                      {incidentDetail.title}
-                    </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '6px', maxWidth: '800px', lineHeight: 1.5 }}>
-                      {incidentDetail.summary}
-                    </p>
-                  </div>
-
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Risk Score</div>
-                    <div style={{ fontSize: '2.4rem', fontWeight: 900, color: '#EF4444', lineHeight: 1 }}>
-                      {incidentDetail.risk_score}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stages Pills */}
-                <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {incidentDetail.stages?.map((stage, idx) => (
-                    <span key={idx} style={{
-                      fontSize: '0.74rem',
-                      fontFamily: 'var(--font-mono)',
-                      background: 'rgba(234, 88, 12, 0.1)',
-                      color: '#EA580C',
-                      padding: '3px 9px',
-                      borderRadius: '4px',
-                      border: '1px solid rgba(234, 88, 12, 0.3)',
-                    }}>
-                      Stage {idx + 1}: {stage}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* MITRE ATT&CK & Rules Triggered */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '18px' }}>
-                <div className="glass-panel" style={{ padding: '20px' }}>
-                  <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>
-                    MITRE ATT&CK Mapping
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {incidentDetail.mitre_techniques?.map((m, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(245, 240, 230, 0.6)', border: '1px solid rgba(220, 210, 195, 0.5)', borderRadius: '6px' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#111827', fontWeight: 600 }}>{m.name}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#EA580C', fontWeight: 700 }}>{m.id}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="glass-panel" style={{ padding: '20px' }}>
-                  <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>
-                    Explainable Rules (R1–R11)
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {incidentDetail.rules_triggered?.map((r, i) => (
-                      <div key={i} style={{ padding: '8px 12px', background: 'rgba(245, 240, 230, 0.6)', border: '1px solid rgba(220, 210, 195, 0.5)', borderRadius: '6px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#EA580C', fontWeight: 700 }}>{r.rule_id}</span>
-                          <span style={{ fontSize: '0.7rem', color: '#16A34A', fontWeight: 800 }}>+{r.score_contribution} pts</span>
-                        </div>
-                        <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          {r.rule_name}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Evidence Log Stream */}
-              <div className="glass-panel" style={{ padding: '20px' }}>
-                <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>
-                  Raw Log Evidence Chain
-                </h3>
-                <div style={{
-                  background: 'rgba(245, 240, 232, 0.75)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '8px',
-                  padding: '14px',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.76rem',
-                  lineHeight: 1.6,
-                  maxHeight: '260px',
-                  overflowY: 'auto',
-                  color: '#1F2937'
-                }}>
-                  {incidentDetail.evidence_events?.map((ev, i) => (
-                    <div key={i} style={{ borderBottom: '1px solid rgba(220, 210, 195, 0.5)', padding: '4px 0' }}>
-                      <span style={{ color: '#EA580C', fontWeight: 700 }}>{ev.timestamp}</span> | <span style={{ color: '#16A34A', fontWeight: 700 }}>{ev.event_type}</span> | {ev.raw_snippet || `${ev.source_ip || ''} -> ${ev.dest_ip || ''} (${ev.user || ''})`}
-                    </div>
-                  ))}
-                </div>
-              </div>
+          {activeTab === 'incident-detail' && !incidentDetail && (
+            <div className="glass-panel" style={{ padding: '36px', textAlign: 'center', maxWidth: '640px', margin: '40px auto' }}>
+              <ShieldAlert size={36} color="#EA580C" style={{ margin: '0 auto 12px' }} />
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>
+                No Incident Selected
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginBottom: '20px' }}>
+                No correlated incidents found for the active analysis dataset.
+              </p>
+              <button 
+                onClick={() => setActiveTab('incidents')}
+                className="btn-peach"
+                style={{ padding: '8px 18px', fontSize: '0.84rem' }}
+              >
+                ← View Incidents List
+              </button>
             </div>
           )}
+
+          {activeTab === 'incident-detail' && incidentDetail && (() => {
+            const mitreTechniques = (incidentDetail.alerts && incidentDetail.alerts.length > 0)
+              ? incidentDetail.alerts
+                  .filter(a => a.mitre?.technique)
+                  .map(a => ({ id: a.mitre.technique, name: `${a.stage} · ${a.mitre.tactic || ''}` }))
+                  .filter((v, i, arr) => arr.findIndex(t => t.id === v.id) === i)
+              : (incidentDetail.mitre_techniques || []);
+
+            const rulesTriggered = (incidentDetail.alerts && incidentDetail.alerts.length > 0)
+              ? incidentDetail.alerts.map(a => ({
+                  rule_id: a.rule_id,
+                  rule_name: a.rule_name,
+                  score_contribution: a.points,
+                  severity: a.severity,
+                  reason: a.reason,
+                }))
+              : (incidentDetail.rules_triggered || []);
+
+            const evidenceLines = (incidentDetail.evidence_lines && incidentDetail.evidence_lines.length > 0)
+              ? incidentDetail.evidence_lines
+              : (incidentDetail.evidence ? Object.values(incidentDetail.evidence) : (incidentDetail.evidence_events || []));
+
+            return (
+              <div>
+                <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <button 
+                    onClick={() => setActiveTab('incidents')}
+                    style={{ background: 'transparent', border: 'none', color: '#EA580C', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700 }}
+                  >
+                    ← Back to Incident List
+                  </button>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <a
+                      href={`${API_BASE}/analyses/${analysisId}/incidents/${incidentDetail.id}/report?format=md`}
+                      download={`chaintrace-${incidentDetail.id}.md`}
+                      className="btn-glass"
+                      style={{ fontSize: '0.74rem', padding: '5px 12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#111827' }}
+                      title="Download Incident Report (Markdown)"
+                    >
+                      <FileText size={12} color="#EA580C" />
+                      <span>Report (MD)</span>
+                    </a>
+                    <a
+                      href={`${API_BASE}/analyses/${analysisId}/incidents/${incidentDetail.id}/report?format=json`}
+                      download={`chaintrace-${incidentDetail.id}.json`}
+                      className="btn-glass"
+                      style={{ fontSize: '0.74rem', padding: '5px 12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#111827' }}
+                      title="Download Full JSON"
+                    >
+                      <ExternalLink size={12} color="#EA580C" />
+                      <span>JSON</span>
+                    </a>
+                    <button 
+                      className="btn-glass"
+                      onClick={() => handleCopy(incidentDetail.id)}
+                      style={{ fontSize: '0.74rem', padding: '5px 12px' }}
+                    >
+                      {copiedText === incidentDetail.id ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
+                      <span>{copiedText === incidentDetail.id ? 'Copied' : 'Copy Incident ID'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Incident Header Card */}
+                <div className="glass-panel" style={{ padding: '24px 28px', marginBottom: '18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <span style={{
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          background: incidentDetail.level === 'critical' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                          color: incidentDetail.level === 'critical' ? '#DC2626' : '#D97706',
+                          border: `1px solid ${incidentDetail.level === 'critical' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(245, 158, 11, 0.35)'}`,
+                        }}>
+                          {incidentDetail.level} THREAT
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                          Incident #{incidentDetail.id}
+                        </span>
+                      </div>
+                      <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827' }}>
+                        {incidentDetail.title}
+                      </h1>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '6px', maxWidth: '800px', lineHeight: 1.5 }}>
+                        {incidentDetail.summary}
+                      </p>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Risk Score</div>
+                      <div style={{ fontSize: '2.4rem', fontWeight: 900, color: '#EF4444', lineHeight: 1 }}>
+                        {incidentDetail.risk_score}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stages Pills */}
+                  <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {incidentDetail.stages?.map((stage, idx) => (
+                      <span key={idx} style={{
+                        fontSize: '0.74rem',
+                        fontFamily: 'var(--font-mono)',
+                        background: 'rgba(234, 88, 12, 0.1)',
+                        color: '#EA580C',
+                        padding: '3px 9px',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(234, 88, 12, 0.3)',
+                      }}>
+                        Stage {idx + 1}: {stage}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Remediation Recommendation Box */}
+                  {incidentDetail.recommendation && (
+                    <div style={{
+                      padding: '14px 18px',
+                      borderRadius: '10px',
+                      background: 'rgba(234, 88, 12, 0.08)',
+                      border: '1px solid rgba(234, 88, 12, 0.25)',
+                      marginTop: '16px',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#EA580C', fontWeight: 800, fontSize: '0.74rem', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        <Shield size={14} /> Actionable Remediation Guidance
+                      </div>
+                      <p style={{ fontSize: '0.84rem', color: '#1F2937', lineHeight: 1.5, margin: 0 }}>
+                        {incidentDetail.recommendation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Kill-Chain Chronological Attack Story */}
+                {incidentDetail.story && incidentDetail.story.length > 0 && (
+                  <div className="glass-panel" style={{ padding: '20px', marginBottom: '18px' }}>
+                    <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Flame size={16} color="#EA580C" /> Chronological Kill-Chain Attack Story
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {incidentDetail.story.map((st, idx) => (
+                        <div key={idx} style={{
+                          display: 'flex',
+                          gap: '12px',
+                          alignItems: 'flex-start',
+                          padding: '12px 14px',
+                          borderRadius: '8px',
+                          background: 'rgba(255, 255, 255, 0.7)',
+                          border: '1px solid var(--border-subtle)',
+                        }}>
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #FF9944 0%, #FF6622 100%)',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 800,
+                            fontSize: '0.7rem',
+                            flexShrink: 0,
+                          }}>
+                            {idx + 1}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#EA580C', textTransform: 'uppercase' }}>
+                                {st.stage}
+                              </span>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                                {st.ts ? new Date(st.ts).toLocaleString() : ''}
+                              </span>
+                            </div>
+                            <p style={{ fontSize: '0.84rem', color: '#1F2937', lineHeight: 1.5, margin: 0 }}>
+                              {st.text}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* MITRE ATT&CK & Rules Triggered */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '18px' }}>
+                  <div className="glass-panel" style={{ padding: '20px' }}>
+                    <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>
+                      MITRE ATT&CK Mapping
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {mitreTechniques.length > 0 ? (
+                        mitreTechniques.map((m, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(245, 240, 230, 0.6)', border: '1px solid rgba(220, 210, 195, 0.5)', borderRadius: '6px' }}>
+                            <span style={{ fontSize: '0.8rem', color: '#111827', fontWeight: 600 }}>{m.name}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#EA580C', fontWeight: 700 }}>{m.id}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>No MITRE techniques mapped.</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="glass-panel" style={{ padding: '20px' }}>
+                    <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>
+                      Explainable Rules (R1–R11)
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {rulesTriggered.length > 0 ? (
+                        rulesTriggered.map((r, i) => (
+                          <div key={i} style={{ padding: '8px 12px', background: 'rgba(245, 240, 230, 0.6)', border: '1px solid rgba(220, 210, 195, 0.5)', borderRadius: '6px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '0.78rem', color: '#EA580C', fontWeight: 700 }}>{r.rule_id} · {r.rule_name}</span>
+                              <span style={{ fontSize: '0.7rem', color: '#16A34A', fontWeight: 800 }}>+{r.score_contribution} pts</span>
+                            </div>
+                            {r.reason && (
+                              <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                {r.reason}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>No detection rules recorded.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Evidence Log Stream */}
+                <div className="glass-panel" style={{ padding: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827' }}>
+                      Raw Log Evidence Chain ({evidenceLines.length} events)
+                    </h3>
+                  </div>
+                  <div style={{
+                    background: 'rgba(245, 240, 232, 0.75)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    padding: '14px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.76rem',
+                    lineHeight: 1.6,
+                    maxHeight: '260px',
+                    overflowY: 'auto',
+                    color: '#1F2937'
+                  }}>
+                    {evidenceLines.length > 0 ? (
+                      evidenceLines.map((ev, i) => (
+                        <div key={i} style={{ borderBottom: '1px solid rgba(220, 210, 195, 0.5)', padding: '5px 0', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ color: '#EA580C', fontWeight: 700 }}>{ev.ts ? new Date(ev.ts).toLocaleTimeString() : (ev.timestamp || '00:00')}</span>
+                          <span style={{ color: '#16A34A', fontWeight: 700 }}>[{ev.type || ev.event_type || 'event'}]</span>
+                          <span style={{ color: '#6B7280' }}>({ev.file ? `${ev.file}:${ev.line_no}` : ''})</span>
+                          <span style={{ color: '#111827' }}>{ev.raw || ev.raw_snippet || `${ev.src_ip || ''} -> ${ev.user || ''}`}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ color: 'var(--text-muted)' }}>No raw evidence records attached to this incident.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ─── TAB: ENTITIES (ATTACKER & PIVOT EXPLORER) ────────────────────── */}
           {activeTab === 'entities' && (
@@ -2050,8 +2339,21 @@ export default function App() {
                       MITRE ATT&CK EVALUATION
                     </span>
                     <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                      Active Dataset: {analysisId}
+                      Active Dataset: {analysisId || 'None'}
                     </span>
+                    {evaluation && (
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        color: '#15803D',
+                        background: 'rgba(22, 163, 74, 0.12)',
+                        padding: '2px 8px',
+                        borderRadius: '9999px',
+                        border: '1px solid rgba(22, 163, 74, 0.3)'
+                      }}>
+                        BENCHMARK VALIDATED
+                      </span>
+                    )}
                   </div>
                   <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
                     Evaluation & Detection Benchmark
@@ -2061,387 +2363,514 @@ export default function App() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => setActiveTab('upload')}
-                  className="btn-peach"
-                  style={{ fontSize: '0.82rem', padding: '8px 16px' }}
-                >
-                  <Play size={14} fill="#FFFFFF" />
-                  <span>Configure Simulator</span>
-                </button>
-              </div>
-
-              {/* 4 Distinct KPI Sub-Cards */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '14px',
-                marginBottom: '24px'
-              }}>
-                {/* KPI 1: Scenario Coverage */}
-                <div className="glass-panel" style={{
-                  padding: '18px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  borderTop: '2px solid #16A34A',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
-                      Detection Coverage
-                    </span>
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      background: 'rgba(22, 163, 74, 0.12)',
-                      border: '1px solid rgba(22, 163, 74, 0.3)',
-                      color: '#15803D',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <CheckCircle2 size={11} />
-                      {(((evaluation?.scenarios_detected ?? 4) / (evaluation?.scenarios_total ?? 5)) * 100).toFixed(0)}% PASS
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#111827', lineHeight: 1 }}>
-                      {evaluation?.scenarios_detected ?? 4}
-                      <span style={{ fontSize: '1.15rem', color: 'var(--text-muted)', fontWeight: 600, marginLeft: '4px' }}>
-                        / {evaluation?.scenarios_total ?? 5}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                      Ground-truth scenarios detected
-                    </div>
-                  </div>
-                </div>
-
-                {/* KPI 2: Precision Score */}
-                <div className="glass-panel" style={{
-                  padding: '18px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  borderTop: '2px solid #D97706',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
-                      Precision Score
-                    </span>
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      background: 'rgba(217, 119, 6, 0.12)',
-                      border: '1px solid rgba(217, 119, 6, 0.3)',
-                      color: '#D97706',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <AlertTriangle size={11} />
-                      TUNING ADVISORY
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#D97706', lineHeight: 1 }}>
-                      {((evaluation?.precision ?? 0.286) * 100).toFixed(1)}%
-                    </div>
-                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                      Noise from background syslog volume
-                    </div>
-                  </div>
-                </div>
-
-                {/* KPI 3: Recall Rate */}
-                <div className="glass-panel" style={{
-                  padding: '18px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  borderTop: '2px solid #16A34A',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
-                      Recall Rate
-                    </span>
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      background: 'rgba(22, 163, 74, 0.12)',
-                      border: '1px solid rgba(22, 163, 74, 0.3)',
-                      color: '#15803D',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <CheckCircle2 size={11} />
-                      HIGH CAPTURE
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#15803D', lineHeight: 1 }}>
-                      {(((evaluation?.recall ?? 0.727)) * 100).toFixed(1)}%
-                    </div>
-                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                      True positive attack entity retrieval
-                    </div>
-                  </div>
-                </div>
-
-                {/* KPI 4: Critical False Positives */}
-                <div className="glass-panel" style={{
-                  padding: '18px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  borderTop: '2px solid #EA580C',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
-                      Critical False Positives
-                    </span>
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      background: 'rgba(234, 88, 12, 0.12)',
-                      border: '1px solid rgba(234, 88, 12, 0.3)',
-                      color: '#EA580C',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <Flame size={11} />
-                      NOISE METRIC
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#EA580C', lineHeight: 1 }}>
-                      {evaluation?.critical_false_positives ?? 20}
-                    </div>
-                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                      Benign entities escalated to high/critical
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Per-Scenario Dynamic Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                gap: '16px'
-              }}>
-                {(evaluation?.per_scenario || [
-                  { scenario_id: 'S1', detected: true, expected_entities: ['185.220.101.7', 'deploy', 'sysupdate'], found_entities: ['185.220.101.7', 'deploy', 'sysupdate'] },
-                  { scenario_id: 'S2', detected: true, expected_entities: ['45.33.10.8', 'user05'], found_entities: ['45.33.10.8', 'user05'] },
-                  { scenario_id: 'S3', detected: true, expected_entities: ['45.33.10.9'], found_entities: ['45.33.10.9'] },
-                  { scenario_id: 'S4', detected: false, expected_entities: ['192.168.100.10', '192.168.100.11', '192.168.100.12'], found_entities: [] },
-                  { scenario_id: 'S5', detected: true, expected_entities: ['172.16.5.20', 'user15'], found_entities: ['172.16.5.20', 'user15'] }
-                ]).map((sc) => {
-                  const metaMap = {
-                    S1: { name: 'SSH Compromise & Cron Backdoor', mitre: 'T1110.001 · T1053.003', target: 'Bastion SSH -> /etc/cron.d/sysupdate' },
-                    S2: { name: 'Distributed Password Spraying', mitre: 'T1110.003 · Spraying Campaign', target: 'Auth Subsystem -> Multi-Account Probe' },
-                    S3: { name: 'Web Recon -> SQLi -> Exfiltration', mitre: 'T1190 · T1048.003 (Exfil)', target: 'NGINX Access Logs -> Outbound HTTPS' },
-                    S4: { name: 'Low-and-Slow Subnet Distributed Pivot', mitre: 'T1018 · Low Threshold Lateral', target: 'Subnet 192.168.100.0/24 Workstations' },
-                    S5: { name: 'Insider Off-Hours Sudo & Anomalous Egress', mitre: 'T1078 · Insider Threat', target: 'Finance Host -> Sudoers Escalation' },
-                  };
-                  const meta = metaMap[sc.scenario_id] || { name: `Scenario ${sc.scenario_id}`, mitre: 'T1000 · Cyber Kill Chain', target: 'Target Infrastructure' };
-
-                  const expected = sc.expected_entities || [];
-                  const found = sc.found_entities || [];
-                  const expectedCount = expected.length;
-                  const foundCount = found.length;
-                  const isFullyMatched = foundCount >= expectedCount && expectedCount > 0;
-                  const isZeroMatched = foundCount === 0;
-
-                  return (
-                    <div
-                      key={sc.scenario_id}
-                      className="glass-panel"
-                      style={{
-                        padding: '20px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        height: '100%',
-                        minHeight: '290px',
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {analyses.filter(a => a.source === 'simulation').length > 0 && !evaluation && (
+                    <button
+                      onClick={() => {
+                        const sim = analyses.find(a => a.source === 'simulation');
+                        if (sim) handleSelectAnalysis(sim.id);
                       }}
+                      className="btn-peach-outline"
+                      style={{ fontSize: '0.82rem', padding: '8px 14px' }}
                     >
+                      <Target size={14} />
+                      <span>Switch to Simulated Dataset</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setActiveTab('upload')}
+                    className="btn-peach"
+                    style={{ fontSize: '0.82rem', padding: '8px 16px' }}
+                  >
+                    <Play size={14} fill="#FFFFFF" />
+                    <span>Run Attack Simulator</span>
+                  </button>
+                </div>
+              </div>
+
+              {!evaluation ? (
+                /* Informative State for Uploaded Log Dataset */
+                <div className="glass-panel" style={{ padding: '36px 32px', textAlign: 'center', marginBottom: '24px' }}>
+                  <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: 'rgba(232, 166, 106, 0.18)',
+                    border: '1px solid rgba(232, 166, 106, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px',
+                    color: '#E8A66A'
+                  }}>
+                    <Database size={26} />
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>
+                    Uploaded Log Dataset Active ({analysisId || 'Custom Upload'})
+                  </h3>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '640px', margin: '0 auto 20px', lineHeight: 1.55 }}>
+                    This dataset was ingested from a live syslog file. Ground-truth benchmark metrics (Precision, Recall, and Multi-Stage Scenario Matching) require known simulation targets. 
+                    Your live incidents, alerts, and correlation stories are fully accessible in the <strong>Overview</strong> and <strong>Incidents</strong> tabs.
+                  </p>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: '12px',
+                    maxWidth: '680px',
+                    margin: '0 auto 24px',
+                    textAlign: 'left'
+                  }}>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.6)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '12px 16px' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Ingested Events</div>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#111827' }}>{summary?.stats?.events?.toLocaleString() ?? 0}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.6)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '12px 16px' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Correlated Incidents</div>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#DC2626' }}>{summary?.stats?.incidents ?? incidents.length}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.6)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '12px 16px' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Triggered Alerts</div>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#D97706' }}>{summary?.stats?.alerts ?? 0}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setActiveTab('incidents')}
+                      className="btn-peach-outline"
+                      style={{ padding: '9px 18px', fontSize: '0.85rem' }}
+                    >
+                      <ShieldAlert size={15} />
+                      <span>Explore Ingested Incidents ({incidents.length})</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('upload')}
+                      className="btn-peach"
+                      style={{ padding: '9px 20px', fontSize: '0.85rem' }}
+                    >
+                      <Play size={15} fill="#FFFFFF" />
+                      <span>Run Attack Simulation to Score Benchmark</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Full Benchmark Scoring View when evaluation data exists */
+                <>
+                  {/* 4 Distinct KPI Sub-Cards */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                    gap: '14px',
+                    marginBottom: '24px'
+                  }}>
+                    {/* KPI 1: Scenario Coverage */}
+                    <div className="glass-panel" style={{
+                      padding: '18px 20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      borderTop: '2px solid #16A34A',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                          Detection Coverage
+                        </span>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          background: 'rgba(22, 163, 74, 0.12)',
+                          border: '1px solid rgba(22, 163, 74, 0.3)',
+                          color: '#15803D',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <CheckCircle2 size={11} />
+                          {(((evaluation.scenarios_detected) / (evaluation.scenarios_total || 1)) * 100).toFixed(0)}% PASS
+                        </span>
+                      </div>
                       <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
-                              padding: '2px 7px',
-                              borderRadius: '4px',
-                              background: 'rgba(235, 225, 215, 0.7)',
-                              color: '#111827',
-                              border: '1px solid var(--border-subtle)'
-                            }}>
-                              {sc.scenario_id}
-                            </span>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                              {meta.mitre}
-                            </span>
-                          </div>
-
-                          {sc.detected ? (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              padding: '3px 9px',
-                              borderRadius: '9999px',
-                              background: 'rgba(22, 163, 74, 0.12)',
-                              border: '1px solid rgba(22, 163, 74, 0.3)',
-                              color: '#15803D',
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
-                            }}>
-                              <CheckCircle2 size={12} /> DETECTED
-                            </span>
-                          ) : (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              padding: '3px 9px',
-                              borderRadius: '9999px',
-                              background: 'rgba(220, 38, 38, 0.12)',
-                              border: '1px solid rgba(220, 38, 38, 0.3)',
-                              color: '#DC2626',
-                              fontSize: '0.72rem',
-                              fontWeight: 800,
-                            }}>
-                              <AlertTriangle size={12} /> MISSED
-                            </span>
-                          )}
+                        <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#111827', lineHeight: 1 }}>
+                          {evaluation.scenarios_detected}
+                          <span style={{ fontSize: '1.15rem', color: 'var(--text-muted)', fontWeight: 600, marginLeft: '4px' }}>
+                            / {evaluation.scenarios_total}
+                          </span>
                         </div>
-
-                        <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
-                          {meta.name}
-                        </h4>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                          {meta.target}
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                          Ground-truth scenarios detected
                         </div>
                       </div>
+                    </div>
 
-                      <div style={{ flex: 1, padding: '10px 0', borderTop: '1px solid var(--border-subtle)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                            Entity Match Ratio
-                          </span>
-                          <span style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            background: isFullyMatched ? 'rgba(22, 163, 74, 0.12)' : (isZeroMatched ? 'rgba(220, 38, 38, 0.12)' : 'rgba(217, 119, 6, 0.12)'),
-                            border: `1px solid ${isFullyMatched ? 'rgba(22, 163, 74, 0.3)' : (isZeroMatched ? 'rgba(220, 38, 38, 0.3)' : 'rgba(217, 119, 6, 0.3)')}`,
-                            color: isFullyMatched ? '#15803D' : (isZeroMatched ? '#DC2626' : '#D97706'),
-                          }}>
-                            {foundCount}/{expectedCount} matched
-                          </span>
+                    {/* KPI 2: Precision Score */}
+                    <div className="glass-panel" style={{
+                      padding: '18px 20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      borderTop: `2px solid ${evaluation.precision >= 0.8 ? '#16A34A' : '#D97706'}`,
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                          Precision Score
+                        </span>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          background: evaluation.precision >= 0.8 ? 'rgba(22, 163, 74, 0.12)' : 'rgba(217, 119, 6, 0.12)',
+                          border: `1px solid ${evaluation.precision >= 0.8 ? 'rgba(22, 163, 74, 0.3)' : 'rgba(217, 119, 6, 0.3)'}`,
+                          color: evaluation.precision >= 0.8 ? '#15803D' : '#D97706',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {evaluation.precision >= 0.8 ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />}
+                          {evaluation.precision >= 0.8 ? 'HIGH PRECISION' : 'TUNING ADVISORY'}
+                        </span>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '2.1rem', fontWeight: 900, color: evaluation.precision >= 0.8 ? '#15803D' : '#D97706', lineHeight: 1 }}>
+                          {(evaluation.precision * 100).toFixed(1)}%
                         </div>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                          {evaluation.precision === 1 ? 'Zero false positives across campaign' : 'Evaluated against background volume'}
+                        </div>
+                      </div>
+                    </div>
 
-                        <div style={{ marginBottom: '10px' }}>
-                          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>
-                            Expected Entities ({expectedCount}):
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            {expected.map((e, idx) => (
-                              <span
-                                key={idx}
-                                style={{
+                    {/* KPI 3: Recall Rate */}
+                    <div className="glass-panel" style={{
+                      padding: '18px 20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      borderTop: '2px solid #16A34A',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                          Recall Rate
+                        </span>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          background: 'rgba(22, 163, 74, 0.12)',
+                          border: '1px solid rgba(22, 163, 74, 0.3)',
+                          color: '#15803D',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <CheckCircle2 size={11} />
+                          HIGH CAPTURE
+                        </span>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#15803D', lineHeight: 1 }}>
+                          {(evaluation.recall * 100).toFixed(1)}%
+                        </div>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                          True positive attack entity retrieval
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KPI 4: Critical False Positives */}
+                    <div className="glass-panel" style={{
+                      padding: '18px 20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      borderTop: `2px solid ${evaluation.critical_false_positives === 0 ? '#16A34A' : '#EA580C'}`,
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                          Critical False Positives
+                        </span>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          background: evaluation.critical_false_positives === 0 ? 'rgba(22, 163, 74, 0.12)' : 'rgba(234, 88, 12, 0.12)',
+                          border: `1px solid ${evaluation.critical_false_positives === 0 ? 'rgba(22, 163, 74, 0.3)' : 'rgba(234, 88, 12, 0.3)'}`,
+                          color: evaluation.critical_false_positives === 0 ? '#15803D' : '#EA580C',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {evaluation.critical_false_positives === 0 ? <CheckCircle2 size={11} /> : <Flame size={11} />}
+                          {evaluation.critical_false_positives === 0 ? 'CLEAN BASELINE' : 'NOISE METRIC'}
+                        </span>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '2.1rem', fontWeight: 900, color: evaluation.critical_false_positives === 0 ? '#15803D' : '#EA580C', lineHeight: 1 }}>
+                          {evaluation.critical_false_positives}
+                        </div>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                          Benign entities escalated to high/critical
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Per-Scenario Dynamic Grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                    gap: '16px'
+                  }}>
+                    {(evaluation.per_scenario || []).map((sc) => {
+                      const metaMap = {
+                        S1: { name: 'SSH Compromise & Cron Backdoor', mitre: 'T1110.001 · T1053.003', target: 'Bastion SSH -> /etc/cron.d/sysupdate' },
+                        S2: { name: 'Distributed Password Spraying', mitre: 'T1110.003 · Spraying Campaign', target: 'Auth Subsystem -> Multi-Account Probe' },
+                        S3: { name: 'Web Recon -> SQLi -> Exfiltration', mitre: 'T1190 · T1048.003 (Exfil)', target: 'NGINX Access Logs -> Outbound HTTPS' },
+                        S4: { name: 'Low-and-Slow Subnet Distributed Pivot', mitre: 'T1018 · Low Threshold Lateral', target: 'Subnet 192.168.100.0/24 Workstations' },
+                        S5: { name: 'Insider Off-Hours Sudo & Anomalous Egress', mitre: 'T1078 · Insider Threat', target: 'Finance Host -> Sudoers Escalation' },
+                      };
+                      const meta = metaMap[sc.scenario_id] || { name: `Scenario ${sc.scenario_id}`, mitre: 'T1000 · Cyber Kill Chain', target: 'Target Infrastructure' };
+
+                      const expected = sc.expected_entities || [];
+                      const found = sc.found_entities || [];
+                      const expectedCount = expected.length;
+                      const foundCount = found.length;
+                      const isFullyMatched = foundCount >= expectedCount && expectedCount > 0;
+                      const isZeroMatched = foundCount === 0;
+
+                      return (
+                        <div
+                          key={sc.scenario_id}
+                          className="glass-panel"
+                          style={{
+                            padding: '20px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            height: '100%',
+                            minHeight: '290px',
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
                                   fontFamily: 'var(--font-mono)',
-                                  fontSize: '0.73rem',
-                                  padding: '2px 8px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                  padding: '2px 7px',
                                   borderRadius: '4px',
-                                  background: 'rgba(240, 235, 226, 0.7)',
-                                  border: '1px solid var(--border-subtle)',
-                                  color: '#374151',
-                                }}
-                              >
-                                {e}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>
-                            Captured Entities ({foundCount}):
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                            {found.length > 0 ? (
-                              found.map((e, idx) => (
-                                <span
-                                  key={idx}
-                                  style={{
-                                    fontFamily: 'var(--font-mono)',
-                                    fontSize: '0.73rem',
-                                    padding: '2px 8px',
-                                    borderRadius: '4px',
-                                    background: 'rgba(22, 163, 74, 0.12)',
-                                    border: '1px solid rgba(22, 163, 74, 0.3)',
-                                    color: '#15803D',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                  }}
-                                >
-                                  <Check size={11} strokeWidth={2.8} />
-                                  {e}
+                                  background: 'rgba(235, 225, 215, 0.7)',
+                                  color: '#111827',
+                                  border: '1px solid var(--border-subtle)'
+                                }}>
+                                  {sc.scenario_id}
                                 </span>
-                              ))
-                            ) : (
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                                  {meta.mitre}
+                                </span>
+                              </div>
+
+                              {sc.detected ? (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '3px 9px',
+                                  borderRadius: '9999px',
+                                  background: 'rgba(22, 163, 74, 0.12)',
+                                  border: '1px solid rgba(22, 163, 74, 0.3)',
+                                  color: '#15803D',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                }}>
+                                  <CheckCircle2 size={12} /> DETECTED
+                                </span>
+                              ) : (
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '3px 9px',
+                                  borderRadius: '9999px',
+                                  background: 'rgba(220, 38, 38, 0.12)',
+                                  border: '1px solid rgba(220, 38, 38, 0.3)',
+                                  color: '#DC2626',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 800,
+                                }}>
+                                  <AlertTriangle size={12} /> MISSED
+                                </span>
+                              )}
+                            </div>
+
+                            <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
+                              {meta.name}
+                            </h4>
+                            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                              {meta.target}
+                            </div>
+                          </div>
+
+                          <div style={{ flex: 1, padding: '10px 0', borderTop: '1px solid var(--border-subtle)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                                Entity Match Ratio
+                              </span>
                               <span style={{
                                 fontFamily: 'var(--font-mono)',
                                 fontSize: '0.72rem',
-                                color: '#9CA3AF',
-                                fontStyle: 'italic',
-                                padding: '3px 8px',
+                                fontWeight: 700,
+                                padding: '2px 8px',
                                 borderRadius: '4px',
-                                background: 'rgba(240, 235, 226, 0.6)',
-                                border: '1px dashed var(--border-subtle)',
+                                background: isFullyMatched ? 'rgba(22, 163, 74, 0.12)' : (isZeroMatched ? 'rgba(220, 38, 38, 0.12)' : 'rgba(217, 119, 6, 0.12)'),
+                                border: `1px solid ${isFullyMatched ? 'rgba(22, 163, 74, 0.3)' : (isZeroMatched ? 'rgba(220, 38, 38, 0.3)' : 'rgba(217, 119, 6, 0.3)')}`,
+                                color: isFullyMatched ? '#15803D' : (isZeroMatched ? '#DC2626' : '#D97706'),
                               }}>
-                                None captured
+                                {foundCount}/{expectedCount} matched
+                              </span>
+                            </div>
+
+                            <div style={{ marginBottom: '10px' }}>
+                              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>
+                                Expected Entities ({expectedCount}):
+                              </div>
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {expected.map((e, idx) => (
+                                  <span
+                                    key={idx}
+                                    style={{
+                                      fontFamily: 'var(--font-mono)',
+                                      fontSize: '0.73rem',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      background: 'rgba(240, 235, 226, 0.7)',
+                                      border: '1px solid var(--border-subtle)',
+                                      color: '#374151',
+                                    }}
+                                  >
+                                    {e}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '5px' }}>
+                                Captured Entities ({foundCount}):
+                              </div>
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {found.length > 0 ? (
+                                  found.map((e, idx) => (
+                                    <span
+                                      key={idx}
+                                      style={{
+                                        fontFamily: 'var(--font-mono)',
+                                        fontSize: '0.73rem',
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        background: 'rgba(22, 163, 74, 0.12)',
+                                        border: '1px solid rgba(22, 163, 74, 0.3)',
+                                        color: '#15803D',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                    >
+                                      <Check size={11} strokeWidth={2.8} />
+                                      {e}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span style={{
+                                    fontFamily: 'var(--font-mono)',
+                                    fontSize: '0.72rem',
+                                    color: '#9CA3AF',
+                                    fontStyle: 'italic',
+                                    padding: '3px 8px',
+                                    borderRadius: '4px',
+                                    background: 'rgba(240, 235, 226, 0.6)',
+                                    border: '1px dashed var(--border-subtle)',
+                                  }}>
+                                    None captured
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {sc.found_stages && sc.found_stages.length > 0 && (
+                              <div style={{ marginTop: '10px' }}>
+                                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                  Kill Chain Stages:
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                  {sc.found_stages.map((st, sIdx) => (
+                                    <span key={sIdx} style={{
+                                      fontSize: '0.67rem',
+                                      fontWeight: 600,
+                                      padding: '1px 6px',
+                                      borderRadius: '3px',
+                                      background: 'rgba(232, 166, 106, 0.15)',
+                                      color: '#9A4E11',
+                                      border: '1px solid rgba(232, 166, 106, 0.3)',
+                                    }}>
+                                      {st}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{
+                            paddingTop: '10px',
+                            borderTop: '1px solid var(--border-subtle)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontSize: '0.72rem',
+                            color: 'var(--text-muted)'
+                          }}>
+                            <span>Validation Status</span>
+                            {sc.incident_id ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedIncidentId(sc.incident_id);
+                                  fetchIncidentDetail(analysisId, sc.incident_id);
+                                  setActiveTab('incidents');
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#15803D',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  textDecoration: 'underline',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}
+                              >
+                                View {sc.incident_id} →
+                              </button>
+                            ) : (
+                              <span style={{ fontWeight: 600, color: sc.detected ? '#15803D' : '#6B7280' }}>
+                                {sc.detected ? 'Verified by Correlation Graph' : 'Requires Subnet Correlation Rule'}
                               </span>
                             )}
                           </div>
                         </div>
-                      </div>
-
-                      <div style={{
-                        paddingTop: '10px',
-                        borderTop: '1px solid var(--border-subtle)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: '0.72rem',
-                        color: 'var(--text-muted)'
-                      }}>
-                        <span>Validation Status</span>
-                        <span style={{ fontWeight: 600, color: sc.detected ? '#15803D' : '#6B7280' }}>
-                          {sc.detected ? 'Verified by Correlation Graph' : 'Requires Subnet Correlation Rule'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
