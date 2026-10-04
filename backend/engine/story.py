@@ -140,6 +140,14 @@ RULE_TITLES = {  # sharper titles when a characteristic rule is present
 }
 
 
+# Login rules' evidence starts with the earlier failures; the story step happens at the login itself.
+LOGIN_RULES = {"R4", "R5", "R6"}
+
+
+def _moment(a: Alert):
+    return a.last_seen if a.rule_id in LOGIN_RULES else a.first_seen
+
+
 def _choose_title(stages: set, rule_ids: set) -> tuple:
     best = max((t for t in TITLES if t[0] <= stages), key=lambda t: len(t[0]), default=None)
     if best is None:
@@ -157,7 +165,7 @@ def generate_stories(incidents: List[Incident], alerts: List[Alert]) -> List[Inc
 
     for inc in incidents:
         inc_alerts = sorted((by_id[i] for i in inc.alert_ids if i in by_id),
-                            key=lambda a: (a.first_seen, STAGE_ORDER.index(a.stage)))
+                            key=lambda a: (_moment(a), STAGE_ORDER.index(a.stage)))
 
         # Merge consecutive same-rule alerts into one sentence.
         groups: List[List[Alert]] = []
@@ -166,7 +174,7 @@ def generate_stories(incidents: List[Incident], alerts: List[Alert]) -> List[Inc
                 groups[-1].append(a)
             else:
                 groups.append([a])
-        inc.story = [StoryStep(ts=g[0].first_seen, stage=g[0].stage, text=SENTENCES[g[0].rule_id](g),
+        inc.story = [StoryStep(ts=_moment(g[0]), stage=g[0].stage, text=SENTENCES[g[0].rule_id](g),
                                alert_id=g[0].id) for g in groups]
 
         title, assessment = _choose_title({a.stage for a in inc_alerts}, {a.rule_id for a in inc_alerts})
