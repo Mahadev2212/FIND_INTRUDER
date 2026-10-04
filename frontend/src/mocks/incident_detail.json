@@ -1,0 +1,84 @@
+{
+  "id": "inc-001",
+  "title": "SSH compromise with persistence",
+  "risk_score": 94,
+  "level": "critical",
+  "entities": { "ips": ["185.220.101.7"], "users": ["deploy", "sysupdate"] },
+  "start": "2026-10-04T02:03:11Z",
+  "end": "2026-10-04T02:45:02Z",
+  "stages": ["Credential Access", "Initial Access", "Privilege Escalation", "Persistence"],
+  "summary": "Assessment: likely SSH compromise with persistence via backdoor account.",
+  "recommendation": "Disable deploy and sysupdate accounts. Block 185.220.101.7 at the firewall. Rotate all credentials. Audit root command history.",
+  "story": [
+    {
+      "ts": "2026-10-04T02:03:11Z",
+      "stage": "Credential Access",
+      "text": "IP 185.220.101.7 made 214 failed SSH logins against 3 accounts in 38 minutes (Credential Access, T1110.001).",
+      "alert_id": "a1"
+    },
+    {
+      "ts": "2026-10-04T02:41:09Z",
+      "stage": "Initial Access",
+      "text": "IP 185.220.101.7 successfully logged in as deploy after prior failures – the first login for this account from this IP and outside its normal 09:00–18:00 hours (Initial Access, T1078).",
+      "alert_id": "a2"
+    },
+    {
+      "ts": "2026-10-04T02:43:30Z",
+      "stage": "Privilege Escalation",
+      "text": "User deploy ran sudo as root within 2 minutes of suspicious login (Privilege Escalation, T1548.003).",
+      "alert_id": "a3"
+    },
+    {
+      "ts": "2026-10-04T02:45:02Z",
+      "stage": "Persistence",
+      "text": "A new account was created: sysupdate (Persistence, T1136.001 – local account creation).",
+      "alert_id": "a4"
+    }
+  ],
+  "alerts": [
+    {
+      "id": "a1", "rule_id": "R1", "rule_name": "SSH brute force",
+      "severity": "high", "points": 35, "stage": "Credential Access",
+      "mitre": { "tactic": "Credential Access", "technique": "T1110.001" },
+      "entity": { "ip": "185.220.101.7", "user": null },
+      "first_seen": "2026-10-04T02:03:11Z", "last_seen": "2026-10-04T02:40:58Z",
+      "count": 214, "reason": "214 failed SSH logins from 185.220.101.7 in 5 min",
+      "evidence_event_ids": ["auth.log:1", "auth.log:2", "auth.log:3"]
+    },
+    {
+      "id": "a2", "rule_id": "R4", "rule_name": "Login after failures",
+      "severity": "critical", "points": 50, "stage": "Initial Access",
+      "mitre": { "tactic": "Initial Access", "technique": "T1078" },
+      "entity": { "ip": "185.220.101.7", "user": "deploy" },
+      "first_seen": "2026-10-04T02:41:09Z", "last_seen": "2026-10-04T02:41:09Z",
+      "count": 1, "reason": "185.220.101.7 had 214 failures before success as deploy",
+      "evidence_event_ids": ["auth.log:215", "auth.log:216"]
+    },
+    {
+      "id": "a3", "rule_id": "R7", "rule_name": "Privilege use after suspicious login",
+      "severity": "high", "points": 35, "stage": "Privilege Escalation",
+      "mitre": { "tactic": "Privilege Escalation", "technique": "T1548.003" },
+      "entity": { "ip": "185.220.101.7", "user": "deploy" },
+      "first_seen": "2026-10-04T02:43:30Z", "last_seen": "2026-10-04T02:43:30Z",
+      "count": 1, "reason": "deploy ran sudo within 2 min of suspicious login",
+      "evidence_event_ids": ["auth.log:217"]
+    },
+    {
+      "id": "a4", "rule_id": "R8", "rule_name": "Account created / added to sudo",
+      "severity": "critical", "points": 50, "stage": "Persistence",
+      "mitre": { "tactic": "Persistence", "technique": "T1136.001" },
+      "entity": { "ip": null, "user": "sysupdate" },
+      "first_seen": "2026-10-04T02:45:02Z", "last_seen": "2026-10-04T02:45:02Z",
+      "count": 1, "reason": "New account or sudo membership: sysupdate",
+      "evidence_event_ids": ["auth.log:218"]
+    }
+  ],
+  "evidence": {
+    "auth.log:1":   { "file": "auth.log", "line_no": 1,   "raw": "Oct  4 02:03:11 web01 sshd[2211]: Failed password for invalid user admin from 185.220.101.7 port 51122 ssh2" },
+    "auth.log:2":   { "file": "auth.log", "line_no": 2,   "raw": "Oct  4 02:03:21 web01 sshd[2212]: Failed password for invalid user root from 185.220.101.7 port 51123 ssh2" },
+    "auth.log:215": { "file": "auth.log", "line_no": 215, "raw": "Oct  4 02:41:09 web01 sshd[2290]: Accepted password for deploy from 185.220.101.7 port 51877 ssh2" },
+    "auth.log:216": { "file": "auth.log", "line_no": 216, "raw": "Oct  4 02:41:09 web01 sshd[2290]: Accepted password for deploy from 185.220.101.7 port 51877 ssh2" },
+    "auth.log:217": { "file": "auth.log", "line_no": 217, "raw": "Oct  4 02:43:30 web01 sudo: deploy : TTY=pts/0 ; USER=root ; COMMAND=/bin/bash" },
+    "auth.log:218": { "file": "auth.log", "line_no": 218, "raw": "Oct  4 02:45:02 web01 useradd[2331]: new user: name=sysupdate, UID=1005, GID=1005" }
+  }
+}
