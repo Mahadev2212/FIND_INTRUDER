@@ -232,6 +232,14 @@ def _jsonl_get(obj: dict, keys: tuple) -> Optional[str]:
     return None
 
 
+def _jsonl_int(value) -> Optional[int]:
+    """Lenient int for JSON fields: '-', '', 'abc' or nested values become None instead of crashing."""
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _jsonl_parse_ts(raw_ts) -> Optional[datetime]:
     """
     Parse a timestamp from a JSON value.
@@ -337,8 +345,8 @@ def parse_jsonl_log(content: str, filename: str) -> ParseResult:
             http = HttpFields(
                 method=str(method) if method else None,
                 path=str(path) if path else None,
-                status=int(status) if status is not None else None,
-                bytes=int(size) if size is not None else None,
+                status=_jsonl_int(status),
+                bytes=_jsonl_int(size),
                 ua=str(ua) if ua else None,
             )
 

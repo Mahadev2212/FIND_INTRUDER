@@ -426,3 +426,14 @@ class TestBruteForceScenario:
                 assert eid.startswith("brute.jsonl:"), (
                     f"Evidence ID {eid!r} does not reference the JSONL file"
                 )
+
+
+def test_non_numeric_http_fields_do_not_drop_the_file():
+    """One line with status/bytes '-' must not crash parsing or lose the other valid lines."""
+    from engine.pipeline import run_analysis
+    text = ('{"ts":"2026-10-04T02:00:00Z","event":"http","ip":"1.2.3.4","status":"-","bytes":"-"}\n'
+            '{"ts":"2026-10-04T02:00:01Z","event":"http","ip":"1.2.3.4","status":200,"bytes":{"x":1}}\n')
+    r = run_analysis([("x.jsonl", text)])
+    assert r.stats.parsed == 2 and r.stats.skipped == 0
+    assert r.events[0].http.status is None and r.events[1].http.status == 200
+    assert r.events[1].http.bytes is None

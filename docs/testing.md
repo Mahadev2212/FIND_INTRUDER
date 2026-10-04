@@ -37,11 +37,16 @@
 
 ## Real pytest summary line
 
+Merged `bhanu` branch (engine + Claude C1–C3 + Antigravity A1–A3), with a Postgres test database:
+
 ```
-101 passed, 3 skipped, 2 warnings in 23.38s
+TEST_DATABASE_URL=postgresql://... pytest tests -q
+136 passed in 37.63s
 ```
 
-*(43 original tests + 10 new from test_parsers_real.py + 48 new from test_jsonl.py = 101 passed)*
+Without `TEST_DATABASE_URL`: `133 passed, 3 skipped` (the 3 skipped are the Postgres T18/T19 tests).
+
+*(43 original engine/API tests + 26 robustness + 5 report + 10 Loghub + 49 JSON-lines, plus 3 Postgres)*
 
 ---
 
