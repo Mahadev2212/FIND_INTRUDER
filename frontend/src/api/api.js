@@ -6,7 +6,7 @@
  */
 
 const USE_MOCKS = true; // TODO: flip to false at H7 integration
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || ""; // same-origin (see vite.config.js proxy)
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

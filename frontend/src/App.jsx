@@ -19,7 +19,9 @@ import mockIncidentDetail from './mocks/incident_detail.json';
 import mockEntities from './mocks/entities.json';
 import mockEvaluation from './mocks/evaluation.json';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
+// Same-origin by default: works when FastAPI serves the build (deployed / localhost:8000) and in
+// `npm run dev` through the Vite proxy. Set VITE_API_URL only if the API lives on another host.
+const API_BASE = (import.meta.env.VITE_API_URL || '') + '/api';
 
 /* ─── Visual Helper SVG Components (Single Source of Truth Aesthetic) ──────── */
 
