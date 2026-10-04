@@ -22,7 +22,7 @@ async function request(path, options = {}) {
 
 // ─── Mock imports (loaded only when USE_MOCKS = true) ─────────────────────────
 const getMock = async (name) => {
-  const mod = await import(`./mocks/${name}.json`);
+  const mod = await import(`../mocks/${name}.json`);
   return mod.default;
 };
 

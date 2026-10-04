@@ -1,0 +1,244 @@
+:root {
+  /* Deep Carbon & Industrial Obsidian - ZERO Purple, ZERO Blue */
+  --bg-app: #0a0c0f;
+  --bg-card: #13171e;
+  --bg-card-raised: #1a202a;
+  --bg-card-hover: #222a38;
+  --bg-terminal: #07090c;
+  --bg-input: #0e1117;
+
+  --border-subtle: #202634;
+  --border-medium: #2e374a;
+  --border-strong: #3f4b64;
+
+  /* Unique Accent: Hyper-Lime / Solar Citron (High-Tech Hacker & Cyber Aesthetic) */
+  --accent-lime: #bcfc00;
+  --accent-lime-hover: #cdff1a;
+  --accent-lime-subtle: rgba(188, 252, 0, 0.12);
+  --accent-lime-border: rgba(188, 252, 0, 0.35);
+
+  /* Secondary Accent: Solar Ochre / Blaze Orange */
+  --accent-solar: #ff7733;
+  --accent-solar-subtle: rgba(255, 119, 51, 0.12);
+  --accent-solar-border: rgba(255, 119, 51, 0.35);
+
+  /* Tertiary Accent: Cyber Emerald */
+  --accent-mint: #00f0a0;
+  --accent-mint-subtle: rgba(0, 240, 160, 0.12);
+
+  /* Threat Severity Levels */
+  --threat-critical: #ff2d55;
+  --threat-critical-bg: rgba(255, 45, 85, 0.14);
+  --threat-critical-border: rgba(255, 45, 85, 0.35);
+
+  --threat-high: #ff7733;
+  --threat-high-bg: rgba(255, 119, 51, 0.14);
+  --threat-high-border: rgba(255, 119, 51, 0.35);
+
+  --threat-medium: #ffcc00;
+  --threat-medium-bg: rgba(255, 204, 0, 0.14);
+  --threat-medium-border: rgba(255, 204, 0, 0.35);
+
+  --threat-low: #bcfc00;
+  --threat-low-bg: rgba(188, 252, 0, 0.12);
+  --threat-low-border: rgba(188, 252, 0, 0.35);
+
+  /* Typography */
+  --text-pure: #ffffff;
+  --text-primary: #e6edf3;
+  --text-secondary: #9aa4b2;
+  --text-muted: #5e6878;
+
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  background-image: 
+    radial-gradient(ellipse at 50% -10%, rgba(188, 252, 0, 0.04) 0%, transparent 60%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 28px 28px, 28px 28px;
+}
+
+/* Solar Cards */
+.card-solar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-solar:hover {
+  border-color: var(--border-medium);
+}
+
+.card-interactive:hover {
+  border-color: var(--accent-lime-border);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 12px rgba(188, 252, 0, 0.08);
+}
+
+/* Unique Lime Primary Button */
+.btn-lime {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: 0.86rem;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-lime);
+  color: #080a0c;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 10px rgba(188, 252, 0, 0.25);
+}
+
+.btn-lime:hover:not(:disabled) {
+  background: var(--accent-lime-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(188, 252, 0, 0.4);
+}
+
+.btn-lime:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Secondary Button */
+.btn-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-main);
+  font-weight: 600;
+  font-size: 0.84rem;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-dark:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  border-color: var(--border-strong);
+  color: #fff;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.badge-critical {
+  background: var(--threat-critical-bg);
+  color: var(--threat-critical);
+  border: 1px solid var(--threat-critical-border);
+}
+
+.badge-high {
+  background: var(--threat-high-bg);
+  color: var(--threat-high);
+  border: 1px solid var(--threat-high-border);
+}
+
+.badge-medium {
+  background: var(--threat-medium-bg);
+  color: var(--threat-medium);
+  border: 1px solid var(--threat-medium-border);
+}
+
+.badge-low {
+  background: var(--threat-low-bg);
+  color: var(--threat-low);
+  border: 1px solid var(--threat-low-border);
+}
+
+/* Tag / Chip */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Glowing Pulsing Status Dot */
+.pulse-lime {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-lime);
+  box-shadow: 0 0 10px var(--accent-lime);
+  animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(188, 252, 0, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(188, 252, 0, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(188, 252, 0, 0); }
+}
+
+/* Monospace Log Container */
+.terminal-box {
+  background: var(--bg-terminal);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
