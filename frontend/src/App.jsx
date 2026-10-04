@@ -6,7 +6,7 @@ import {
   Search, Filter, ExternalLink, Database, Sparkles, Layers,
   Clock, Shield, Eye, Copy, Check, Zap, Flame, Radio,
   Cpu, Lock, Unlock, ArrowUpRight, Home, BarChart2, Settings, BookOpen,
-  Target, GitBranch, Share2
+  Target, GitBranch, Share2, MoreVertical
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
@@ -21,37 +21,70 @@ import mockEvaluation from './mocks/evaluation.json';
 
 const API_BASE = 'http://127.0.0.1:8000/api';
 
-/* ─── Visual Helper SVG Components (Matching Reference Design) ──────────────── */
+/* ─── Visual Helper SVG Components (Single Source of Truth Aesthetic) ──────── */
 
 function NetworkGlobeSvg() {
   return (
     <svg
       width="340"
-      height="220"
-      viewBox="0 0 340 220"
+      height="230"
+      viewBox="0 0 340 230"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       style={{
         position: 'absolute',
-        right: '260px',
+        right: '250px',
         top: '50%',
         transform: 'translateY(-50%)',
-        opacity: 0.28,
+        opacity: 0.65,
         pointerEvents: 'none',
+        zIndex: 1,
       }}
     >
-      <circle cx="170" cy="110" r="95" stroke="#E8A66A" strokeWidth="1" strokeDasharray="3 3" />
-      <circle cx="170" cy="110" r="75" stroke="#E8A66A" strokeWidth="1" opacity="0.6" />
-      <ellipse cx="170" cy="110" rx="95" ry="40" stroke="#E8A66A" strokeWidth="1" strokeDasharray="2 3" />
-      <ellipse cx="170" cy="110" rx="95" ry="70" stroke="#E8A66A" strokeWidth="1" />
-      <ellipse cx="170" cy="110" rx="40" ry="95" stroke="#E8A66A" strokeWidth="1" />
-      <line x1="75" y1="110" x2="265" y2="110" stroke="#E8A66A" strokeWidth="1" opacity="0.8" />
-      <line x1="170" y1="15" x2="170" y2="205" stroke="#E8A66A" strokeWidth="1" opacity="0.8" />
-      <circle cx="140" cy="90" r="3" fill="#E8A66A" />
-      <circle cx="210" cy="125" r="3.5" fill="#E8A66A" />
-      <circle cx="185" cy="70" r="2.5" fill="#F4C7A1" />
-      <circle cx="120" cy="130" r="3" fill="#F4C7A1" />
-      <circle cx="220" cy="85" r="2" fill="#E8A66A" />
+      <defs>
+        <radialGradient id="globeGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FED7AA" stopOpacity="0.45" />
+          <stop offset="60%" stopColor="#FDBA74" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#F97316" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Warm Ambient Radial Glow */}
+      <circle cx="170" cy="115" r="105" fill="url(#globeGlow)" />
+
+      {/* Outer Silhouette Circles */}
+      <circle cx="170" cy="115" r="95" stroke="#E07A5F" strokeWidth="1.2" strokeDasharray="3 3" opacity="0.7" />
+      <circle cx="170" cy="115" r="94" stroke="#EA580C" strokeWidth="0.6" opacity="0.4" />
+      <circle cx="170" cy="115" r="76" stroke="#E07A5F" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.45" />
+
+      {/* Tilted Elliptical Coordinate Mesh */}
+      <g transform="rotate(-15 170 115)">
+        {/* Latitudes */}
+        <ellipse cx="170" cy="115" rx="94" ry="72" stroke="#EA580C" strokeWidth="0.8" opacity="0.5" />
+        <ellipse cx="170" cy="115" rx="94" ry="40" stroke="#E07A5F" strokeWidth="0.9" strokeDasharray="3 3" opacity="0.55" />
+        <ellipse cx="170" cy="115" rx="94" ry="16" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" />
+        <ellipse cx="170" cy="85" rx="86" ry="24" stroke="#F97316" strokeWidth="0.75" opacity="0.4" />
+        <ellipse cx="170" cy="145" rx="86" ry="24" stroke="#F97316" strokeWidth="0.75" opacity="0.4" />
+
+        {/* Longitudes */}
+        <ellipse cx="170" cy="115" rx="42" ry="94" stroke="#EA580C" strokeWidth="0.9" opacity="0.5" />
+        <ellipse cx="170" cy="115" rx="72" ry="94" stroke="#E07A5F" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.45" />
+        <line x1="76" y1="115" x2="264" y2="115" stroke="#EA580C" strokeWidth="0.8" opacity="0.5" />
+        <line x1="170" y1="21" x2="170" y2="209" stroke="#EA580C" strokeWidth="0.8" opacity="0.5" />
+
+        {/* Glowing Network Node Coordinates */}
+        <circle cx="135" cy="95" r="3.5" fill="#EA580C" />
+        <circle cx="135" cy="95" r="7" stroke="#F97316" strokeWidth="0.8" opacity="0.5" />
+        <circle cx="212" cy="132" r="3.5" fill="#E07A5F" />
+        <circle cx="188" cy="70" r="2.5" fill="#F97316" />
+        <circle cx="118" cy="136" r="3" fill="#EA580C" />
+        <circle cx="225" cy="90" r="2.5" fill="#F4C7A1" />
+        <circle cx="160" cy="160" r="2.5" fill="#E07A5F" />
+        
+        {/* Threat trajectory arc */}
+        <path d="M 135 95 Q 170 75 212 132" stroke="#EF4444" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.75" />
+        <circle cx="212" cy="132" r="4.5" fill="#EF4444" opacity="0.85" />
+      </g>
     </svg>
   );
 }
@@ -60,28 +93,28 @@ function WaveLinesSvg() {
   return (
     <svg
       width="160"
-      height="90"
-      viewBox="0 0 160 90"
+      height="70"
+      viewBox="0 0 160 70"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ opacity: 0.35, pointerEvents: 'none', margin: '20px auto 10px auto' }}
+      style={{ opacity: 0.5, pointerEvents: 'none', margin: '16px auto 8px auto' }}
     >
       <path
-        d="M-10 45 C30 15, 80 75, 130 35 C150 20, 170 60, 180 45"
-        stroke="#E8A66A"
+        d="M-10 35 C30 10, 80 60, 130 25 C150 12, 170 48, 180 35"
+        stroke="#EA580C"
         strokeWidth="1.2"
         fill="none"
       />
       <path
-        d="M-10 60 C30 30, 80 90, 130 50 C150 35, 170 75, 180 60"
-        stroke="#F4C7A1"
+        d="M-10 48 C30 22, 80 72, 130 38 C150 25, 170 60, 180 48"
+        stroke="#F97316"
         strokeWidth="1"
         strokeDasharray="2 3"
         fill="none"
       />
       <path
-        d="M-10 30 C30 5, 80 65, 130 25 C150 10, 170 50, 180 30"
-        stroke="#E8A66A"
+        d="M-10 22 C30 2, 80 50, 130 16 C150 5, 170 38, 180 22"
+        stroke="#E07A5F"
         strokeWidth="0.8"
         opacity="0.6"
         fill="none"
@@ -90,7 +123,7 @@ function WaveLinesSvg() {
   );
 }
 
-function WaveformBars({ color = '#E8A66A', pattern = [4, 6, 8, 5, 10, 7, 12, 9, 14, 8, 6, 12, 16] }) {
+function WaveformBars({ color = '#EA580C', pattern = [4, 6, 8, 5, 10, 7, 12, 9, 14, 8, 6, 12, 16] }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '20px', marginTop: '12px' }}>
       {pattern.map((h, i) => (
@@ -101,7 +134,7 @@ function WaveformBars({ color = '#E8A66A', pattern = [4, 6, 8, 5, 10, 7, 12, 9, 
             height: `${(h / 18) * 100}%`,
             borderRadius: '2px',
             background: color,
-            opacity: 0.35 + (i / pattern.length) * 0.65,
+            opacity: 0.45 + (i / pattern.length) * 0.55,
           }}
         />
       ))}
@@ -121,7 +154,7 @@ function SparklineBars() {
             height: `${(b / 14) * 100}%`,
             borderRadius: '1px',
             background: '#EF4444',
-            opacity: 0.45 + (i / bars.length) * 0.55,
+            opacity: 0.55 + (i / bars.length) * 0.45,
           }}
         />
       ))}
@@ -431,11 +464,11 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-app)' }}>
       
-      {/* ─── TOP HEADER BAR (Exact Reference Layout) ────────────────────────── */}
+      {/* ─── TOP HEADER BAR (Single Source of Truth Aesthetic) ─────────────── */}
       <header style={{
         background: 'var(--bg-header)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
@@ -445,6 +478,7 @@ export default function App() {
         alignItems: 'center',
         justifyContent: 'space-between',
         height: '64px',
+        boxShadow: '0 2px 10px rgba(120, 90, 60, 0.03)',
       }}>
         {/* Left: Brand Logo & Top Route Nav */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -457,21 +491,21 @@ export default function App() {
               width: '34px',
               height: '34px',
               borderRadius: '8px',
-              background: 'linear-gradient(135deg, rgba(232, 166, 106, 0.25), rgba(232, 166, 106, 0.08))',
-              border: '1px solid rgba(232, 166, 106, 0.5)',
+              background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.15), rgba(251, 146, 60, 0.1))',
+              border: '1px solid rgba(234, 88, 12, 0.4)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#E8A66A',
-              boxShadow: '0 0 14px rgba(232, 166, 106, 0.25)',
+              color: '#EA580C',
+              boxShadow: '0 2px 8px rgba(234, 88, 12, 0.15)',
             }}>
               <ShieldAlert size={19} strokeWidth={2.4} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em', color: '#fff', lineHeight: 1.1 }}>
+              <div style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em', color: '#111827', lineHeight: 1.1 }}>
                 ChainTrace
               </div>
-              <div style={{ fontSize: '0.62rem', color: '#E8A66A', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '0.62rem', color: '#EA580C', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 ALG-CYBER-01 • THREAT OPS
               </div>
             </div>
@@ -495,14 +529,14 @@ export default function App() {
                     borderRadius: '8px',
                     border: '1px solid transparent',
                     background: 'transparent',
-                    color: isActive ? '#fff' : 'var(--text-secondary)',
+                    color: isActive ? '#111827' : 'var(--text-secondary)',
                     fontWeight: isActive ? 700 : 500,
                     fontSize: '0.84rem',
                     cursor: 'pointer',
                     transition: 'all 0.18s ease',
                   }}
                 >
-                  <Icon size={14} color={isActive ? '#E8A66A' : 'var(--text-muted)'} />
+                  <Icon size={14} color={isActive ? '#EA580C' : 'var(--text-muted)'} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -517,12 +551,13 @@ export default function App() {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            background: 'rgba(255, 255, 255, 0.04)',
+            background: 'rgba(255, 255, 255, 0.85)',
             padding: '5px 12px',
             borderRadius: '20px',
             border: '1px solid var(--border-subtle)',
+            boxShadow: '0 1px 4px rgba(120, 90, 60, 0.05)',
           }}>
-            <Database size={13} color="#E8A66A" />
+            <Database size={13} color="#EA580C" />
             <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
               Dataset:
             </span>
@@ -532,7 +567,7 @@ export default function App() {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#fff',
+                color: '#111827',
                 fontSize: '0.78rem',
                 cursor: 'pointer',
                 outline: 'none',
@@ -541,7 +576,7 @@ export default function App() {
               }}
             >
               {analyses.map(a => (
-                <option key={a.id} value={a.id} style={{ background: '#13171e', color: '#fff' }}>
+                <option key={a.id} value={a.id} style={{ background: '#ffffff', color: '#111827' }}>
                   {a.id} ({a.stats?.events || 5890} evts)
                 </option>
               ))}
@@ -559,8 +594,8 @@ export default function App() {
               gap: '6px',
               padding: '5px 12px',
               borderRadius: '20px',
-              background: (backendAlive && !useMocks) ? 'rgba(88, 184, 106, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-              border: `1px solid ${(backendAlive && !useMocks) ? 'rgba(88, 184, 106, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+              background: (backendAlive && !useMocks) ? 'rgba(22, 163, 74, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+              border: `1px solid ${(backendAlive && !useMocks) ? 'rgba(22, 163, 74, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
               cursor: 'pointer',
               fontSize: '0.72rem',
               fontWeight: 800,
@@ -571,9 +606,9 @@ export default function App() {
               width: '6px',
               height: '6px',
               borderRadius: '50%',
-              background: (backendAlive && !useMocks) ? '#58B86A' : '#EF4444',
+              background: (backendAlive && !useMocks) ? '#16A34A' : '#EF4444',
             }} />
-            <span style={{ color: (backendAlive && !useMocks) ? '#58B86A' : '#EF4444' }}>
+            <span style={{ color: (backendAlive && !useMocks) ? '#15803D' : '#DC2626' }}>
               {(backendAlive && !useMocks) ? 'LIVE BACKEND :8000' : (useMocks ? 'OFFLINE MOCKS' : 'BACKEND OFFLINE')}
             </span>
           </div>
@@ -584,7 +619,7 @@ export default function App() {
             title="Refresh active analysis and server status"
             disabled={loading}
             style={{
-              background: 'rgba(255, 255, 255, 0.04)',
+              background: 'rgba(255, 255, 255, 0.85)',
               border: '1px solid var(--border-subtle)',
               borderRadius: '50%',
               width: '32px',
@@ -595,6 +630,7 @@ export default function App() {
               cursor: loading ? 'not-allowed' : 'pointer',
               color: 'var(--text-secondary)',
               transition: 'all 0.15s ease',
+              boxShadow: '0 1px 4px rgba(120, 90, 60, 0.05)',
             }}
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -605,15 +641,15 @@ export default function App() {
             width: '32px',
             height: '32px',
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.08)',
-            border: '1px solid rgba(255, 255, 255, 0.16)',
+            background: 'linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%)',
+            border: '1px solid rgba(234, 88, 12, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '0.84rem',
             fontWeight: 800,
-            color: '#fff',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            color: '#7C2D12',
+            boxShadow: '0 2px 6px rgba(234, 88, 12, 0.18)',
           }}>
             M
           </div>
@@ -652,7 +688,7 @@ export default function App() {
                     borderRadius: '8px',
                     border: '1px solid transparent',
                     background: 'transparent',
-                    color: isActive ? '#fff' : 'var(--text-secondary)',
+                    color: isActive ? '#111827' : 'var(--text-secondary)',
                     fontWeight: isActive ? 700 : 500,
                     fontSize: '0.84rem',
                     cursor: 'pointer',
@@ -661,7 +697,7 @@ export default function App() {
                     width: '100%',
                   }}
                 >
-                  <Icon size={16} color={isActive ? '#E8A66A' : 'var(--text-muted)'} />
+                  <Icon size={16} color={isActive ? '#EA580C' : 'var(--text-muted)'} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -683,7 +719,7 @@ export default function App() {
                   borderRadius: '6px',
                   background: 'transparent',
                   border: 'none',
-                  color: 'var(--text-muted)',
+                  color: 'var(--text-secondary)',
                   fontSize: '0.82rem',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -703,7 +739,7 @@ export default function App() {
                   borderRadius: '6px',
                   background: 'transparent',
                   border: 'none',
-                  color: 'var(--text-muted)',
+                  color: 'var(--text-secondary)',
                   fontSize: '0.82rem',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -723,7 +759,7 @@ export default function App() {
                   borderRadius: '6px',
                   background: 'transparent',
                   border: 'none',
-                  color: 'var(--text-muted)',
+                  color: 'var(--text-secondary)',
                   fontSize: '0.82rem',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -745,33 +781,33 @@ export default function App() {
               padding: '12px 18px',
               marginBottom: '18px',
               borderRadius: '12px',
-              background: 'rgba(20, 25, 35, 0.95)',
+              background: 'rgba(255, 255, 255, 0.95)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(88, 184, 106, 0.4)',
-              borderLeft: '4px solid #58B86A',
-              color: '#fff',
+              border: '1px solid rgba(22, 163, 74, 0.4)',
+              borderLeft: '4px solid #16A34A',
+              color: '#111827',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               fontSize: '0.84rem',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              boxShadow: '0 8px 24px rgba(120, 90, 60, 0.08)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
-                  background: 'rgba(88, 184, 106, 0.15)',
+                  background: 'rgba(22, 163, 74, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#58B86A',
+                  color: '#16A34A',
                   flexShrink: 0
                 }}>
                   <CheckCircle2 size={15} />
                 </div>
                 <div>
-                  <span style={{ fontWeight: 700, color: '#fff' }}>{successMsg}</span>
+                  <span style={{ fontWeight: 700, color: '#111827' }}>{successMsg}</span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
                     (Ground-truth labels synced in Evaluation Benchmark)
                   </span>
@@ -781,8 +817,8 @@ export default function App() {
                 onClick={() => setSuccessMsg(null)}
                 title="Dismiss notification"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(120, 90, 60, 0.06)',
+                  border: '1px solid rgba(120, 90, 60, 0.12)',
                   color: 'var(--text-secondary)',
                   cursor: 'pointer',
                   borderRadius: '4px',
@@ -805,23 +841,23 @@ export default function App() {
               padding: '12px 18px',
               marginBottom: '18px',
               borderRadius: '12px',
-              background: 'rgba(20, 25, 35, 0.95)',
+              background: 'rgba(255, 255, 255, 0.95)',
               backdropFilter: 'blur(12px)',
               border: '1px solid rgba(239, 68, 68, 0.4)',
               borderLeft: '4px solid #EF4444',
-              color: '#fff',
+              color: '#111827',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               fontSize: '0.84rem',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              boxShadow: '0 8px 24px rgba(239, 68, 68, 0.12)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
-                  background: 'rgba(239, 68, 68, 0.15)',
+                  background: 'rgba(239, 68, 68, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -830,14 +866,14 @@ export default function App() {
                 }}>
                   <AlertTriangle size={15} />
                 </div>
-                <span style={{ fontWeight: 600, color: '#EF4444' }}>{errorMsg}</span>
+                <span style={{ fontWeight: 600, color: '#DC2626' }}>{errorMsg}</span>
               </div>
               <button 
                 onClick={() => setErrorMsg(null)}
                 title="Dismiss error"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(120, 90, 60, 0.06)',
+                  border: '1px solid rgba(120, 90, 60, 0.12)',
                   color: 'var(--text-secondary)',
                   cursor: 'pointer',
                   borderRadius: '4px',
@@ -855,7 +891,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ─── TAB: OVERVIEW (EXACT MATCH TO REFERENCE IMAGE) ───────────────── */}
+          {/* ─── TAB: OVERVIEW (Single Source of Truth Aesthetic) ───────────── */}
           {activeTab === 'overview' && (
             <div>
               {/* 1. Hero Card with Globe Background & Peach CTA */}
@@ -864,10 +900,10 @@ export default function App() {
                 style={{
                   position: 'relative',
                   overflow: 'hidden',
-                  padding: '24px 30px',
+                  padding: '26px 32px',
                   marginBottom: '20px',
-                  background: 'linear-gradient(135deg, rgba(25, 30, 42, 0.75) 0%, rgba(16, 20, 28, 0.85) 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 250, 245, 0.72) 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.95)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -882,13 +918,13 @@ export default function App() {
                 <div style={{ position: 'relative', zIndex: 2, maxWidth: '720px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <span className="pulse-green" />
-                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#58B86A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       INTRUSION DETECTION SYSTEM ACTIVE
                     </span>
                   </div>
 
-                  <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-                    Correlating <span style={{ color: '#E8A66A' }}>Multi-Stage Cyber Attacks</span> from Raw Server Logs
+                  <h1 style={{ fontSize: '1.68rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+                    Correlating <span style={{ color: '#E05328' }}>Multi-Stage Cyber Attacks</span> from Raw Server Logs
                   </h1>
 
                   <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
@@ -903,7 +939,7 @@ export default function App() {
                     onClick={handleRunSimulation}
                     disabled={simulating}
                   >
-                    {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} fill="#1F1F1F" />}
+                    {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} fill="#ffffff" />}
                     <span>{simulating ? 'Injecting S1-S5 & Scoring...' : 'Run Live Attack Simulation'}</span>
                   </button>
                 </div>
@@ -922,33 +958,35 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  border: '1px solid rgba(232, 166, 106, 0.3)',
+                  border: '1px solid rgba(234, 88, 12, 0.25)',
                 }}>
                   <div>
-                    <div style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(232, 166, 106, 0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#E8A66A',
-                      marginBottom: '10px'
-                    }}>
-                      <FileText size={16} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '8px',
+                        background: 'rgba(234, 88, 12, 0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#EA580C',
+                      }}>
+                        <FileText size={16} />
+                      </div>
+                      <MoreVertical size={14} color="#A8A29E" style={{ cursor: 'pointer' }} />
                     </div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       LINES INGESTED
                     </div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
                       {summary?.stats?.parsed ? summary.stats.parsed.toLocaleString() : '5,890'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       {summary?.stats?.skipped !== undefined ? `${summary.stats.skipped} malformed skipped` : '0 malformed skipped'}
                     </div>
                   </div>
-                  <WaveformBars color="#E8A66A" pattern={[4, 6, 8, 5, 10, 7, 12, 9, 14, 8, 6, 12, 16]} />
+                  <WaveformBars color="#EA580C" pattern={[4, 6, 8, 5, 10, 7, 12, 9, 14, 8, 6, 12, 16]} />
                 </div>
 
                 {/* KPI 2: Events Normalized */}
@@ -957,34 +995,35 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  border: '1px solid rgba(88, 184, 106, 0.45)',
-                  boxShadow: '0 8px 24px rgba(88, 184, 106, 0.08)',
+                  border: '1px solid rgba(22, 163, 74, 0.3)',
                 }}>
                   <div>
-                    <div style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(88, 184, 106, 0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#58B86A',
-                      marginBottom: '10px'
-                    }}>
-                      <Database size={16} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '8px',
+                        background: 'rgba(22, 163, 74, 0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#16A34A',
+                      }}>
+                        <Database size={16} />
+                      </div>
+                      <MoreVertical size={14} color="#A8A29E" style={{ cursor: 'pointer' }} />
                     </div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       EVENTS NORMALIZED
                     </div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
                       {summary?.stats?.events ? summary.stats.events.toLocaleString() : '5,890'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       Auth.log + Access.log
                     </div>
                   </div>
-                  <WaveformBars color="#58B86A" pattern={[5, 8, 12, 9, 14, 11, 7, 10, 13, 9, 12, 15, 18]} />
+                  <WaveformBars color="#16A34A" pattern={[5, 8, 12, 9, 14, 11, 7, 10, 13, 9, 12, 15, 18]} />
                 </div>
 
                 {/* KPI 3: Alerts Triggered */}
@@ -993,34 +1032,35 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  border: '1px solid rgba(245, 158, 11, 0.45)',
-                  boxShadow: '0 8px 24px rgba(245, 158, 11, 0.08)',
+                  border: '1px solid rgba(217, 119, 6, 0.3)',
                 }}>
                   <div>
-                    <div style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#F59E0B',
-                      marginBottom: '10px'
-                    }}>
-                      <Radio size={16} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '8px',
+                        background: 'rgba(217, 119, 6, 0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#D97706',
+                      }}>
+                        <Radio size={16} />
+                      </div>
+                      <MoreVertical size={14} color="#A8A29E" style={{ cursor: 'pointer' }} />
                     </div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       ALERTS TRIGGERED
                     </div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
                       {summary?.stats?.alerts ? summary.stats.alerts.toLocaleString() : '196'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       Rules R1 - R11 without LLM
                     </div>
                   </div>
-                  <WaveformBars color="#F59E0B" pattern={[12, 15, 9, 13, 8, 14, 10, 16, 9, 7, 11, 14, 16]} />
+                  <WaveformBars color="#D97706" pattern={[12, 15, 9, 13, 8, 14, 10, 16, 9, 7, 11, 14, 16]} />
                 </div>
 
                 {/* KPI 4: Correlated Attacks */}
@@ -1029,34 +1069,35 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  border: '1px solid rgba(139, 111, 191, 0.45)',
-                  boxShadow: '0 8px 24px rgba(139, 111, 191, 0.08)',
+                  border: '1px solid rgba(124, 58, 237, 0.3)',
                 }}>
                   <div>
-                    <div style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(139, 111, 191, 0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#8B6FBF',
-                      marginBottom: '10px'
-                    }}>
-                      <GitBranch size={16} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '8px',
+                        background: 'rgba(124, 58, 237, 0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#7C3AED',
+                      }}>
+                        <GitBranch size={16} />
+                      </div>
+                      <MoreVertical size={14} color="#A8A29E" style={{ cursor: 'pointer' }} />
                     </div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       CORRELATED ATTACKS
                     </div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
                       {incidents?.length || summary?.stats?.incidents || '10'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       Graph components
                     </div>
                   </div>
-                  <WaveformBars color="#8B6FBF" pattern={[6, 9, 7, 11, 14, 8, 12, 10, 15, 8, 10, 13, 15]} />
+                  <WaveformBars color="#7C3AED" pattern={[6, 9, 7, 11, 14, 8, 12, 10, 15, 8, 10, 13, 15]} />
                 </div>
 
                 {/* KPI 5: Scenarios Detected */}
@@ -1065,34 +1106,35 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  border: '1px solid rgba(88, 184, 106, 0.45)',
-                  boxShadow: '0 8px 24px rgba(88, 184, 106, 0.08)',
+                  border: '1px solid rgba(22, 163, 74, 0.3)',
                 }}>
                   <div>
-                    <div style={{
-                      width: '30px',
-                      height: '30px',
-                      borderRadius: '8px',
-                      background: 'rgba(88, 184, 106, 0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#58B86A',
-                      marginBottom: '10px'
-                    }}>
-                      <Target size={16} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '8px',
+                        background: 'rgba(22, 163, 74, 0.12)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#16A34A',
+                      }}>
+                        <Target size={16} />
+                      </div>
+                      <MoreVertical size={14} color="#A8A29E" style={{ cursor: 'pointer' }} />
                     </div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       SCENARIOS DETECTED
                     </div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.02em', marginTop: '2px', lineHeight: 1 }}>
                       {evaluation?.scenarios_detected ?? 4}/{evaluation?.scenarios_total ?? 5}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
                       Benchmark proof
                     </div>
                   </div>
-                  <WaveformBars color="#58B86A" pattern={[8, 11, 14, 9, 13, 15, 10, 12, 16, 9, 13, 16, 18]} />
+                  <WaveformBars color="#16A34A" pattern={[8, 11, 14, 9, 13, 15, 10, 12, 16, 9, 13, 16, 18]} />
                 </div>
               </div>
 
@@ -1111,17 +1153,17 @@ export default function App() {
                         width: '32px',
                         height: '32px',
                         borderRadius: '8px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid var(--border-subtle)',
+                        background: 'rgba(234, 88, 12, 0.1)',
+                        border: '1px solid rgba(234, 88, 12, 0.25)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#fff',
+                        color: '#EA580C',
                       }}>
                         <BarChart2 size={16} />
                       </div>
                       <div>
-                        <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#fff' }}>
+                        <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#111827' }}>
                           Events Over Time (Burst Detection)
                         </h3>
                         <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '1px' }}>
@@ -1137,7 +1179,7 @@ export default function App() {
                         gap: '6px',
                         padding: '4px 10px',
                         borderRadius: '6px',
-                        background: 'rgba(255, 255, 255, 0.04)',
+                        background: 'rgba(255, 255, 255, 0.85)',
                         border: '1px solid var(--border-subtle)',
                         color: 'var(--text-secondary)',
                         fontSize: '0.74rem',
@@ -1145,7 +1187,7 @@ export default function App() {
                         cursor: 'pointer',
                       }}
                     >
-                      <Activity size={12} color="#E8A66A" />
+                      <Activity size={12} color="#EA580C" />
                       <span>Normalized</span>
                       <ChevronDown size={12} />
                     </button>
@@ -1157,24 +1199,24 @@ export default function App() {
                     left: `${spikePercent}%`,
                     top: '16%',
                     transform: 'translateX(-50%)',
-                    background: 'rgba(16, 20, 28, 0.94)',
-                    backdropFilter: 'blur(10px)',
+                    background: 'rgba(255, 255, 255, 0.96)',
+                    backdropFilter: 'blur(12px)',
                     border: '1px solid rgba(239, 68, 68, 0.45)',
                     borderRadius: '8px',
                     padding: '8px 12px',
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6), 0 0 14px rgba(239, 68, 68, 0.2)',
+                    boxShadow: '0 8px 24px rgba(239, 68, 68, 0.15), 0 2px 6px rgba(0,0,0,0.04)',
                     zIndex: 10,
                     pointerEvents: 'none',
                     minWidth: '130px',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#EF4444', fontSize: '0.72rem', fontWeight: 800 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#DC2626', fontSize: '0.72rem', fontWeight: 800 }}>
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444' }} />
                       <span>Anomalous Spike</span>
                     </div>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       {spikeTime} - Peak Burst
                     </div>
-                    <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#fff', marginTop: '1px' }}>
+                    <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#111827', marginTop: '1px' }}>
                       ~ {spikeCount} events
                     </div>
                   </div>
@@ -1185,20 +1227,20 @@ export default function App() {
                       <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="warmPeachGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#E8A66A" stopOpacity={0.45} />
-                            <stop offset="95%" stopColor="#E8A66A" stopOpacity={0.0} />
+                            <stop offset="5%" stopColor="#F97316" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="#F97316" stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(200, 185, 170, 0.35)" vertical={false} />
                         <XAxis 
                           dataKey="time" 
-                          stroke="#6e7681" 
+                          stroke="#78716C" 
                           fontSize={11} 
                           tickLine={false} 
-                          axisLine={{ stroke: 'rgba(255, 255, 255, 0.08)' }} 
+                          axisLine={{ stroke: 'rgba(210, 195, 175, 0.5)' }} 
                         />
                         <YAxis 
-                          stroke="#6e7681" 
+                          stroke="#78716C" 
                           fontSize={11} 
                           tickLine={false} 
                           axisLine={false}
@@ -1206,18 +1248,18 @@ export default function App() {
                         />
                         <Tooltip 
                           contentStyle={{ 
-                            background: 'rgba(16, 20, 28, 0.95)', 
-                            border: '1px solid rgba(232, 166, 106, 0.4)', 
+                            background: 'rgba(255, 255, 255, 0.95)', 
+                            border: '1px solid rgba(234, 88, 12, 0.35)', 
                             borderRadius: '8px', 
                             fontSize: '12px',
-                            color: '#fff',
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                            color: '#111827',
+                            boxShadow: '0 4px 20px rgba(120, 90, 60, 0.12)',
                           }} 
                         />
                         <Area 
                           type="monotone" 
                           dataKey="count" 
-                          stroke="#E8A66A" 
+                          stroke="#F97316" 
                           strokeWidth={2.5} 
                           fillOpacity={1} 
                           fill="url(#warmPeachGradient)" 
@@ -1236,17 +1278,17 @@ export default function App() {
                           width: '32px',
                           height: '32px',
                           borderRadius: '8px',
-                          background: 'rgba(239, 68, 68, 0.15)',
-                          border: '1px solid rgba(239, 68, 68, 0.4)',
+                          background: 'rgba(239, 68, 68, 0.12)',
+                          border: '1px solid rgba(239, 68, 68, 0.35)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: '#EF4444',
+                          color: '#DC2626',
                         }}>
                           <Target size={16} />
                         </div>
                         <div>
-                          <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#fff' }}>
+                          <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#111827' }}>
                             Priority Attacker Entities
                           </h3>
                           <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
@@ -1260,7 +1302,7 @@ export default function App() {
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#E8A66A',
+                          color: '#EA580C',
                           fontSize: '0.76rem',
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -1308,11 +1350,11 @@ export default function App() {
                             gridTemplateColumns: '1.4fr 1fr 0.8fr 0.6fr',
                             alignItems: 'center',
                             padding: '10px 12px',
-                            borderBottom: i < 4 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
+                            borderBottom: i < 4 ? '1px solid rgba(220, 210, 195, 0.4)' : 'none',
                             cursor: 'pointer',
                             transition: 'background 0.15s ease',
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(234, 88, 12, 0.04)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           {/* Entity Identifier with Icon */}
@@ -1321,7 +1363,8 @@ export default function App() {
                               width: '20px',
                               height: '20px',
                               borderRadius: '4px',
-                              background: 'rgba(255, 255, 255, 0.06)',
+                              background: 'rgba(240, 230, 218, 0.8)',
+                              border: '1px solid rgba(215, 200, 180, 0.6)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1332,7 +1375,7 @@ export default function App() {
                             }}>
                               {item.isIp ? 'P' : <Users size={11} />}
                             </div>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600, color: '#fff' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600, color: '#111827' }}>
                               {item.val}
                             </span>
                           </div>
@@ -1351,7 +1394,7 @@ export default function App() {
                               fontWeight: 900,
                               padding: '2px 8px',
                               borderRadius: '9999px',
-                              boxShadow: '0 2px 8px rgba(239, 68, 68, 0.35)',
+                              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)',
                             }}>
                               {item.score}
                             </span>
@@ -1373,9 +1416,9 @@ export default function App() {
                 className="glass-panel" 
                 style={{
                   padding: '18px 24px',
-                  border: '1px solid rgba(239, 68, 68, 0.45)',
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(20, 24, 34, 0.8) 100%)',
-                  boxShadow: '0 8px 30px rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.28)',
+                  background: 'linear-gradient(135deg, rgba(254, 226, 226, 0.6) 0%, rgba(255, 255, 255, 0.8) 100%)',
+                  boxShadow: '0 8px 30px rgba(239, 68, 68, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.95)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -1389,13 +1432,13 @@ export default function App() {
                     width: '44px',
                     height: '44px',
                     borderRadius: '10px',
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    border: '1px solid rgba(239, 68, 68, 0.5)',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#EF4444',
-                    boxShadow: '0 0 16px rgba(239, 68, 68, 0.35)',
+                    color: '#DC2626',
+                    boxShadow: '0 2px 10px rgba(239, 68, 68, 0.2)',
                     flexShrink: 0,
                   }}>
                     <ShieldAlert size={24} strokeWidth={2.4} />
@@ -1404,9 +1447,9 @@ export default function App() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '3px' }}>
                       <span style={{
-                        border: '1px solid rgba(239, 68, 68, 0.5)',
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        color: '#EF4444',
+                        border: '1px solid rgba(239, 68, 68, 0.35)',
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        color: '#DC2626',
                         fontSize: '0.68rem',
                         fontWeight: 800,
                         padding: '2px 8px',
@@ -1415,7 +1458,7 @@ export default function App() {
                       }}>
                         HIGHEST PRIORITY ATTACK
                       </span>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
                         {incidents && incidents[0] ? incidents[0].title : 'Successful credential attack'}
                       </h3>
                     </div>
@@ -1425,17 +1468,17 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Right: Status Pill, Timestamp & Peach Action Button */}
+                {/* Right: Status Pill, Timestamp & Warm Action Button */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <span style={{
-                    border: '1px solid rgba(239, 68, 68, 0.5)',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    color: '#EF4444',
+                    background: '#EF4444',
+                    color: '#ffffff',
                     fontSize: '0.72rem',
                     fontWeight: 900,
                     padding: '4px 10px',
                     borderRadius: '6px',
                     letterSpacing: '0.05em',
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)',
                   }}>
                     CRITICAL
                   </span>
@@ -1445,14 +1488,35 @@ export default function App() {
                   </span>
 
                   <button 
-                    className="btn-peach"
                     onClick={() => {
                       if (incidents && incidents[0]) {
                         setSelectedIncidentId(incidents[0].id);
                       }
                       setActiveTab('incident-detail');
                     }}
-                    style={{ padding: '8px 18px', fontSize: '0.84rem' }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 18px',
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
+                      borderRadius: '8px',
+                      background: 'rgba(255, 247, 237, 0.95)',
+                      border: '1px solid rgba(234, 88, 12, 0.4)',
+                      color: '#9A3412',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 2px 6px rgba(234, 88, 12, 0.1)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#ffffff';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(234, 88, 12, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 247, 237, 0.95)';
+                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(234, 88, 12, 0.1)';
+                    }}
                   >
                     <span>Examine Story & Evidence</span>
                     <ArrowRight size={14} />
@@ -1467,7 +1531,7 @@ export default function App() {
             <div>
               <div style={{ marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Correlated Incidents</h1>
+                  <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827' }}>Correlated Incidents</h1>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginTop: '2px' }}>
                     Ranked by risk score · Clustered using graph correlation & IP-to-User pivot tracking.
                   </p>
@@ -1483,13 +1547,14 @@ export default function App() {
                         padding: '6px 14px',
                         borderRadius: '6px',
                         border: '1px solid',
-                        borderColor: incidentFilter === filter ? 'var(--color-primary-border)' : 'var(--border-subtle)',
-                        background: incidentFilter === filter ? 'var(--color-primary-subtle)' : 'rgba(255,255,255,0.03)',
-                        color: incidentFilter === filter ? '#E8A66A' : 'var(--text-secondary)',
+                        borderColor: incidentFilter === filter ? 'rgba(234, 88, 12, 0.4)' : 'var(--border-subtle)',
+                        background: incidentFilter === filter ? 'rgba(234, 88, 12, 0.12)' : 'rgba(255, 255, 255, 0.85)',
+                        color: incidentFilter === filter ? '#EA580C' : 'var(--text-secondary)',
                         fontSize: '0.76rem',
                         fontWeight: 700,
                         cursor: 'pointer',
-                        textTransform: 'capitalize'
+                        textTransform: 'capitalize',
+                        boxShadow: '0 1px 3px rgba(120, 90, 60, 0.04)'
                       }}
                     >
                       {filter === 'all' ? `All (${incidents?.length || 0})` : filter}
@@ -1504,7 +1569,7 @@ export default function App() {
                   ?.map((inc) => {
                     const isCrit = inc.level?.toLowerCase() === 'critical';
                     const isHigh = inc.level?.toLowerCase() === 'high';
-                    const accentColor = isCrit ? '#EF4444' : isHigh ? '#F59E0B' : '#E8A66A';
+                    const accentColor = isCrit ? '#EF4444' : isHigh ? '#F59E0B' : '#EA580C';
                     return (
                       <div 
                         key={inc.id}
@@ -1530,13 +1595,13 @@ export default function App() {
                               fontSize: '0.7rem',
                               fontWeight: 800,
                               textTransform: 'uppercase',
-                              background: isCrit ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                              background: isCrit ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)',
                               color: accentColor,
                               border: `1px solid ${accentColor}44`,
                             }}>
                               {inc.level} · {inc.risk_score}
                             </span>
-                            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>
+                            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
                               {inc.title}
                             </h3>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -1563,11 +1628,11 @@ export default function App() {
                             {inc.stages?.map((stage, idx) => (
                               <span key={idx} style={{
                                 fontSize: '0.7rem',
-                                color: '#E8A66A',
+                                color: '#EA580C',
                                 padding: '2px 8px',
                                 borderRadius: '4px',
-                                background: 'rgba(232, 166, 106, 0.1)',
-                                border: '1px solid rgba(232, 166, 106, 0.25)',
+                                background: 'rgba(234, 88, 12, 0.1)',
+                                border: '1px solid rgba(234, 88, 12, 0.25)',
                               }}>
                                 {stage}
                               </span>
@@ -1578,12 +1643,12 @@ export default function App() {
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Entities:</span>
                             {inc.entities?.ips?.map(ip => (
-                              <span key={ip} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem', background: 'rgba(255,255,255,0.06)', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>
+                              <span key={ip} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem', background: 'rgba(240, 230, 218, 0.8)', border: '1px solid rgba(215, 200, 180, 0.6)', color: '#111827', padding: '1px 6px', borderRadius: '4px' }}>
                                 {ip}
                               </span>
                             ))}
                             {inc.entities?.users?.map(u => (
-                              <span key={u} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem', background: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', padding: '1px 6px', borderRadius: '4px' }}>
+                              <span key={u} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem', background: 'rgba(245, 158, 11, 0.15)', color: '#B45309', padding: '1px 6px', borderRadius: '4px' }}>
                                 @{u}
                               </span>
                             ))}
@@ -1602,7 +1667,7 @@ export default function App() {
               <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <button 
                   onClick={() => setActiveTab('incidents')}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}
+                  style={{ background: 'transparent', border: 'none', color: '#EA580C', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700 }}
                 >
                   ← Back to Incident List
                 </button>
@@ -1612,7 +1677,7 @@ export default function App() {
                   onClick={() => handleCopy(incidentDetail.id)}
                   style={{ fontSize: '0.74rem', padding: '5px 12px' }}
                 >
-                  {copiedText === incidentDetail.id ? <Check size={12} color="#58B86A" /> : <Copy size={12} />}
+                  {copiedText === incidentDetail.id ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
                   <span>{copiedText === incidentDetail.id ? 'Copied' : 'Copy Incident ID'}</span>
                 </button>
               </div>
@@ -1628,9 +1693,9 @@ export default function App() {
                         fontSize: '0.7rem',
                         fontWeight: 800,
                         textTransform: 'uppercase',
-                        background: 'rgba(239, 68, 68, 0.15)',
-                        color: '#EF4444',
-                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        color: '#DC2626',
+                        border: '1px solid rgba(239, 68, 68, 0.35)',
                       }}>
                         {incidentDetail.level} THREAT
                       </span>
@@ -1638,7 +1703,7 @@ export default function App() {
                         Incident #{incidentDetail.id}
                       </span>
                     </div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827' }}>
                       {incidentDetail.title}
                     </h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '6px', maxWidth: '800px', lineHeight: 1.5 }}>
@@ -1660,11 +1725,11 @@ export default function App() {
                     <span key={idx} style={{
                       fontSize: '0.74rem',
                       fontFamily: 'var(--font-mono)',
-                      background: 'rgba(232, 166, 106, 0.1)',
-                      color: '#E8A66A',
+                      background: 'rgba(234, 88, 12, 0.1)',
+                      color: '#EA580C',
                       padding: '3px 9px',
                       borderRadius: '4px',
-                      border: '1px solid rgba(232, 166, 106, 0.3)',
+                      border: '1px solid rgba(234, 88, 12, 0.3)',
                     }}>
                       Stage {idx + 1}: {stage}
                     </span>
@@ -1675,29 +1740,29 @@ export default function App() {
               {/* MITRE ATT&CK & Rules Triggered */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '18px' }}>
                 <div className="glass-panel" style={{ padding: '20px' }}>
-                  <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>
                     MITRE ATT&CK Mapping
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {incidentDetail.mitre_techniques?.map((m, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 600 }}>{m.name}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#E8A66A' }}>{m.id}</span>
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(245, 240, 230, 0.6)', border: '1px solid rgba(220, 210, 195, 0.5)', borderRadius: '6px' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#111827', fontWeight: 600 }}>{m.name}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#EA580C', fontWeight: 700 }}>{m.id}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div className="glass-panel" style={{ padding: '20px' }}>
-                  <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>
                     Explainable Rules (R1–R11)
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {incidentDetail.rules_triggered?.map((r, i) => (
-                      <div key={i} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px' }}>
+                      <div key={i} style={{ padding: '8px 12px', background: 'rgba(245, 240, 230, 0.6)', border: '1px solid rgba(220, 210, 195, 0.5)', borderRadius: '6px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#E8A66A', fontWeight: 700 }}>{r.rule_id}</span>
-                          <span style={{ fontSize: '0.7rem', color: '#58B86A' }}>+{r.score_contribution} pts</span>
+                          <span style={{ fontSize: '0.78rem', color: '#EA580C', fontWeight: 700 }}>{r.rule_id}</span>
+                          <span style={{ fontSize: '0.7rem', color: '#16A34A', fontWeight: 800 }}>+{r.score_contribution} pts</span>
                         </div>
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                           {r.rule_name}
@@ -1710,11 +1775,11 @@ export default function App() {
 
               {/* Evidence Log Stream */}
               <div className="glass-panel" style={{ padding: '20px' }}>
-                <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>
                   Raw Log Evidence Chain
                 </h3>
                 <div style={{
-                  background: '#07090c',
+                  background: 'rgba(245, 240, 232, 0.75)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: '8px',
                   padding: '14px',
@@ -1723,11 +1788,11 @@ export default function App() {
                   lineHeight: 1.6,
                   maxHeight: '260px',
                   overflowY: 'auto',
-                  color: 'var(--text-secondary)'
+                  color: '#1F2937'
                 }}>
                   {incidentDetail.evidence_events?.map((ev, i) => (
-                    <div key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', padding: '4px 0' }}>
-                      <span style={{ color: '#E8A66A' }}>{ev.timestamp}</span> | <span style={{ color: '#58B86A' }}>{ev.event_type}</span> | {ev.raw_snippet || `${ev.source_ip || ''} -> ${ev.dest_ip || ''} (${ev.user || ''})`}
+                    <div key={i} style={{ borderBottom: '1px solid rgba(220, 210, 195, 0.5)', padding: '4px 0' }}>
+                      <span style={{ color: '#EA580C', fontWeight: 700 }}>{ev.timestamp}</span> | <span style={{ color: '#16A34A', fontWeight: 700 }}>{ev.event_type}</span> | {ev.raw_snippet || `${ev.source_ip || ''} -> ${ev.dest_ip || ''} (${ev.user || ''})`}
                     </div>
                   ))}
                 </div>
@@ -1740,7 +1805,7 @@ export default function App() {
             <div>
               <div style={{ marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Attacker & Entity Explorer</h1>
+                  <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827' }}>Attacker & Entity Explorer</h1>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginTop: '2px' }}>
                     Aggregated threat tracking across IPs and user identities.
                   </p>
@@ -1752,10 +1817,11 @@ export default function App() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    background: 'rgba(255,255,255,0.04)',
+                    background: 'rgba(255, 255, 255, 0.7)',
                     border: '1px solid var(--border-subtle)',
                     padding: '6px 12px',
                     borderRadius: '6px',
+                    boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.04)',
                   }}>
                     <Search size={14} color="var(--text-muted)" />
                     <input
@@ -1766,7 +1832,7 @@ export default function App() {
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: '#fff',
+                        color: '#111827',
                         fontSize: '0.78rem',
                         outline: 'none',
                         width: '160px',
@@ -1785,8 +1851,8 @@ export default function App() {
                           borderRadius: '6px',
                           border: '1px solid',
                           borderColor: entityFilter === lvl ? 'var(--color-primary-border)' : 'var(--border-subtle)',
-                          background: entityFilter === lvl ? 'var(--color-primary-subtle)' : 'rgba(255,255,255,0.03)',
-                          color: entityFilter === lvl ? '#E8A66A' : 'var(--text-secondary)',
+                          background: entityFilter === lvl ? 'var(--color-primary-subtle)' : 'rgba(255, 255, 255, 0.5)',
+                          color: entityFilter === lvl ? '#EA580C' : 'var(--text-secondary)',
                           fontSize: '0.74rem',
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -1804,7 +1870,7 @@ export default function App() {
               <div className="glass-panel" style={{ overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.84rem' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255, 255, 255, 0.02)', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: 'rgba(245, 240, 232, 0.65)', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>
                       <th style={{ padding: '12px 18px' }}>Type</th>
                       <th style={{ padding: '12px 18px' }}>Entity Identifier</th>
                       <th style={{ padding: '12px 18px' }}>Risk Score</th>
@@ -1819,31 +1885,31 @@ export default function App() {
                       ?.filter(e => entityFilter === 'all' || e.level?.toLowerCase() === entityFilter)
                       ?.filter(e => !entitySearch || e.value.toLowerCase().includes(entitySearch.toLowerCase()))
                       ?.map((ent, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.15s' }}>
                           <td style={{ padding: '12px 18px' }}>
                             <span style={{
                               padding: '2px 6px',
                               borderRadius: '4px',
                               fontSize: '0.66rem',
                               fontWeight: 800,
-                              background: 'rgba(255, 255, 255, 0.06)',
-                              color: '#fff',
+                              background: 'rgba(235, 225, 215, 0.7)',
+                              color: '#111827',
                               textTransform: 'uppercase'
                             }}>
                               {ent.type}
                             </span>
                           </td>
-                          <td style={{ padding: '12px 18px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#fff' }}>
+                          <td style={{ padding: '12px 18px', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#111827' }}>
                             {ent.value}
                           </td>
                           <td style={{ padding: '12px 18px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontWeight: 800, color: '#fff' }}>{ent.risk_score}</span>
-                              <div style={{ width: '70px', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                              <span style={{ fontWeight: 800, color: '#111827' }}>{ent.risk_score}</span>
+                              <div style={{ width: '70px', height: '5px', background: 'rgba(215, 205, 190, 0.45)', borderRadius: '2px', overflow: 'hidden' }}>
                                 <div style={{
                                   width: `${ent.risk_score}%`,
                                   height: '100%',
-                                  background: ent.risk_score >= 80 ? '#EF4444' : ent.risk_score >= 60 ? '#F59E0B' : '#E8A66A'
+                                  background: ent.risk_score >= 80 ? '#DC2626' : ent.risk_score >= 60 ? '#D97706' : '#EA580C'
                                 }} />
                               </div>
                             </div>
@@ -1855,8 +1921,9 @@ export default function App() {
                               padding: '2px 8px',
                               borderRadius: '4px',
                               textTransform: 'uppercase',
-                              background: ent.level === 'critical' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                              color: ent.level === 'critical' ? '#EF4444' : '#F59E0B',
+                              background: ent.level === 'critical' ? 'rgba(220, 38, 38, 0.12)' : 'rgba(217, 119, 6, 0.12)',
+                              color: ent.level === 'critical' ? '#DC2626' : '#D97706',
+                              border: `1px solid ${ent.level === 'critical' ? 'rgba(220, 38, 38, 0.25)' : 'rgba(217, 119, 6, 0.25)'}`
                             }}>
                               {ent.level}
                             </span>
@@ -1908,7 +1975,7 @@ export default function App() {
                       Active Dataset: {analysisId}
                     </span>
                   </div>
-                  <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
+                  <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
                     Evaluation & Detection Benchmark
                   </h1>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginTop: '4px' }}>
@@ -1921,7 +1988,7 @@ export default function App() {
                   className="btn-peach"
                   style={{ fontSize: '0.82rem', padding: '8px 16px' }}
                 >
-                  <Play size={14} fill="#1F1F1F" />
+                  <Play size={14} fill="#FFFFFF" />
                   <span>Configure Simulator</span>
                 </button>
               </div>
@@ -1939,7 +2006,7 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  borderTop: '2px solid #58B86A',
+                  borderTop: '2px solid #16A34A',
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
@@ -1950,9 +2017,9 @@ export default function App() {
                       fontWeight: 800,
                       padding: '2px 8px',
                       borderRadius: '9999px',
-                      background: 'rgba(88, 184, 106, 0.15)',
-                      border: '1px solid rgba(88, 184, 106, 0.35)',
-                      color: '#58B86A',
+                      background: 'rgba(22, 163, 74, 0.12)',
+                      border: '1px solid rgba(22, 163, 74, 0.3)',
+                      color: '#15803D',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px'
@@ -1962,7 +2029,7 @@ export default function App() {
                     </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#111827', lineHeight: 1 }}>
                       {evaluation?.scenarios_detected ?? 4}
                       <span style={{ fontSize: '1.15rem', color: 'var(--text-muted)', fontWeight: 600, marginLeft: '4px' }}>
                         / {evaluation?.scenarios_total ?? 5}
@@ -1980,7 +2047,7 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  borderTop: '2px solid #F59E0B',
+                  borderTop: '2px solid #D97706',
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
@@ -1991,9 +2058,9 @@ export default function App() {
                       fontWeight: 800,
                       padding: '2px 8px',
                       borderRadius: '9999px',
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      border: '1px solid rgba(245, 158, 11, 0.35)',
-                      color: '#F59E0B',
+                      background: 'rgba(217, 119, 6, 0.12)',
+                      border: '1px solid rgba(217, 119, 6, 0.3)',
+                      color: '#D97706',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px'
@@ -2003,7 +2070,7 @@ export default function App() {
                     </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#F59E0B', lineHeight: 1 }}>
+                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#D97706', lineHeight: 1 }}>
                       {((evaluation?.precision ?? 0.286) * 100).toFixed(1)}%
                     </div>
                     <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
@@ -2018,7 +2085,7 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  borderTop: '2px solid #58B86A',
+                  borderTop: '2px solid #16A34A',
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
@@ -2029,9 +2096,9 @@ export default function App() {
                       fontWeight: 800,
                       padding: '2px 8px',
                       borderRadius: '9999px',
-                      background: 'rgba(88, 184, 106, 0.15)',
-                      border: '1px solid rgba(88, 184, 106, 0.35)',
-                      color: '#58B86A',
+                      background: 'rgba(22, 163, 74, 0.12)',
+                      border: '1px solid rgba(22, 163, 74, 0.3)',
+                      color: '#15803D',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px'
@@ -2041,7 +2108,7 @@ export default function App() {
                     </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#58B86A', lineHeight: 1 }}>
+                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#15803D', lineHeight: 1 }}>
                       {(((evaluation?.recall ?? 0.727)) * 100).toFixed(1)}%
                     </div>
                     <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
@@ -2056,7 +2123,7 @@ export default function App() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  borderTop: '2px solid #E8A66A',
+                  borderTop: '2px solid #EA580C',
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
@@ -2067,9 +2134,9 @@ export default function App() {
                       fontWeight: 800,
                       padding: '2px 8px',
                       borderRadius: '9999px',
-                      background: 'rgba(232, 166, 106, 0.15)',
-                      border: '1px solid rgba(232, 166, 106, 0.35)',
-                      color: '#E8A66A',
+                      background: 'rgba(234, 88, 12, 0.12)',
+                      border: '1px solid rgba(234, 88, 12, 0.3)',
+                      color: '#EA580C',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px'
@@ -2079,7 +2146,7 @@ export default function App() {
                     </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#E8A66A', lineHeight: 1 }}>
+                    <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#EA580C', lineHeight: 1 }}>
                       {evaluation?.critical_false_positives ?? 20}
                     </div>
                     <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
@@ -2140,8 +2207,8 @@ export default function App() {
                               fontWeight: 800,
                               padding: '2px 7px',
                               borderRadius: '4px',
-                              background: 'rgba(255, 255, 255, 0.05)',
-                              color: 'var(--text-secondary)',
+                              background: 'rgba(235, 225, 215, 0.7)',
+                              color: '#111827',
                               border: '1px solid var(--border-subtle)'
                             }}>
                               {sc.scenario_id}
@@ -2158,9 +2225,9 @@ export default function App() {
                               gap: '5px',
                               padding: '3px 9px',
                               borderRadius: '9999px',
-                              background: 'rgba(88, 184, 106, 0.15)',
-                              border: '1px solid rgba(88, 184, 106, 0.35)',
-                              color: '#58B86A',
+                              background: 'rgba(22, 163, 74, 0.12)',
+                              border: '1px solid rgba(22, 163, 74, 0.3)',
+                              color: '#15803D',
                               fontSize: '0.72rem',
                               fontWeight: 800,
                             }}>
@@ -2173,9 +2240,9 @@ export default function App() {
                               gap: '5px',
                               padding: '3px 9px',
                               borderRadius: '9999px',
-                              background: 'rgba(239, 68, 68, 0.15)',
-                              border: '1px solid rgba(239, 68, 68, 0.35)',
-                              color: '#EF4444',
+                              background: 'rgba(220, 38, 38, 0.12)',
+                              border: '1px solid rgba(220, 38, 38, 0.3)',
+                              color: '#DC2626',
                               fontSize: '0.72rem',
                               fontWeight: 800,
                             }}>
@@ -2184,7 +2251,7 @@ export default function App() {
                           )}
                         </div>
 
-                        <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
+                        <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
                           {meta.name}
                         </h4>
                         <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
@@ -2203,9 +2270,9 @@ export default function App() {
                             fontWeight: 700,
                             padding: '2px 8px',
                             borderRadius: '4px',
-                            background: isFullyMatched ? 'rgba(88, 184, 106, 0.15)' : (isZeroMatched ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)'),
-                            border: `1px solid ${isFullyMatched ? 'rgba(88, 184, 106, 0.3)' : (isZeroMatched ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)')}`,
-                            color: isFullyMatched ? '#58B86A' : (isZeroMatched ? '#EF4444' : '#F59E0B'),
+                            background: isFullyMatched ? 'rgba(22, 163, 74, 0.12)' : (isZeroMatched ? 'rgba(220, 38, 38, 0.12)' : 'rgba(217, 119, 6, 0.12)'),
+                            border: `1px solid ${isFullyMatched ? 'rgba(22, 163, 74, 0.3)' : (isZeroMatched ? 'rgba(220, 38, 38, 0.3)' : 'rgba(217, 119, 6, 0.3)')}`,
+                            color: isFullyMatched ? '#15803D' : (isZeroMatched ? '#DC2626' : '#D97706'),
                           }}>
                             {foundCount}/{expectedCount} matched
                           </span>
@@ -2224,9 +2291,9 @@ export default function App() {
                                   fontSize: '0.73rem',
                                   padding: '2px 8px',
                                   borderRadius: '4px',
-                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  background: 'rgba(240, 235, 226, 0.7)',
                                   border: '1px solid var(--border-subtle)',
-                                  color: '#e2e8f0',
+                                  color: '#374151',
                                 }}
                               >
                                 {e}
@@ -2249,9 +2316,9 @@ export default function App() {
                                     fontSize: '0.73rem',
                                     padding: '2px 8px',
                                     borderRadius: '4px',
-                                    background: 'rgba(88, 184, 106, 0.15)',
-                                    border: '1px solid rgba(88, 184, 106, 0.35)',
-                                    color: '#58B86A',
+                                    background: 'rgba(22, 163, 74, 0.12)',
+                                    border: '1px solid rgba(22, 163, 74, 0.3)',
+                                    color: '#15803D',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: '4px',
@@ -2265,11 +2332,11 @@ export default function App() {
                               <span style={{
                                 fontFamily: 'var(--font-mono)',
                                 fontSize: '0.72rem',
-                                color: '#64748b',
+                                color: '#9CA3AF',
                                 fontStyle: 'italic',
                                 padding: '3px 8px',
                                 borderRadius: '4px',
-                                background: 'rgba(15, 23, 42, 0.4)',
+                                background: 'rgba(240, 235, 226, 0.6)',
                                 border: '1px dashed var(--border-subtle)',
                               }}>
                                 None captured
@@ -2289,7 +2356,7 @@ export default function App() {
                         color: 'var(--text-muted)'
                       }}>
                         <span>Validation Status</span>
-                        <span style={{ fontWeight: 600, color: sc.detected ? '#58B86A' : '#94a3b8' }}>
+                        <span style={{ fontWeight: 600, color: sc.detected ? '#15803D' : '#6B7280' }}>
                           {sc.detected ? 'Verified by Correlation Graph' : 'Requires Subnet Correlation Rule'}
                         </span>
                       </div>
@@ -2304,7 +2371,7 @@ export default function App() {
           {activeTab === 'upload' && (
             <div style={{ maxWidth: '840px', margin: '0 auto' }}>
               <div style={{ marginBottom: '22px', textAlign: 'center' }}>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff' }}>Run Detection & Simulation</h1>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#111827' }}>Run Detection & Simulation</h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '4px' }}>
                   Inject synthetic multi-stage attack scenarios into 3-day baseline traffic or upload logs.
                 </p>
@@ -2313,8 +2380,8 @@ export default function App() {
               {/* Simulation Configuration Card */}
               <div className="glass-panel" style={{ padding: '26px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <Crosshair size={20} color="#E8A66A" />
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>
+                  <Crosshair size={20} color="#EA580C" />
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>
                     Interactive Attack Simulator (Ground-Truth Labels)
                   </h3>
                 </div>
@@ -2338,8 +2405,8 @@ export default function App() {
                         gap: '12px', 
                         padding: '12px 16px', 
                         borderRadius: '8px', 
-                        background: selectedScenarios[s.id] ? 'rgba(232, 166, 106, 0.08)' : 'rgba(255, 255, 255, 0.02)', 
-                        border: `1px solid ${selectedScenarios[s.id] ? 'rgba(232, 166, 106, 0.4)' : 'var(--border-subtle)'}`,
+                        background: selectedScenarios[s.id] ? 'rgba(234, 88, 12, 0.08)' : 'rgba(255, 255, 255, 0.6)', 
+                        border: `1px solid ${selectedScenarios[s.id] ? 'rgba(234, 88, 12, 0.4)' : 'var(--border-subtle)'}`,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                       }}
@@ -2348,10 +2415,10 @@ export default function App() {
                         type="checkbox" 
                         checked={!!selectedScenarios[s.id]} 
                         onChange={(e) => setSelectedScenarios(prev => ({ ...prev, [s.id]: e.target.checked }))}
-                        style={{ accentColor: '#E8A66A', width: '16px', height: '16px' }}
+                        style={{ accentColor: '#EA580C', width: '16px', height: '16px' }}
                       />
                       <div>
-                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff' }}>{s.title}</div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111827' }}>{s.title}</div>
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>{s.desc}</div>
                       </div>
                     </label>
@@ -2364,7 +2431,7 @@ export default function App() {
                   disabled={simulating}
                   style={{ width: '100%', padding: '12px' }}
                 >
-                  {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} fill="#1F1F1F" />}
+                  {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} fill="#FFFFFF" />}
                   <span>{simulating ? 'Generating & Analyzing Dataset...' : 'Generate Synthetic Traffic & Correlate Attack Chains'}</span>
                 </button>
               </div>
@@ -2372,8 +2439,8 @@ export default function App() {
               {/* Log Upload Card */}
               <div className="glass-panel" style={{ padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <Upload size={18} color="#E8A66A" />
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>
+                  <Upload size={18} color="#EA580C" />
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#111827' }}>
                     Upload Custom Server Logs
                   </h3>
                 </div>
@@ -2388,7 +2455,7 @@ export default function App() {
                   style={{
                     padding: '12px',
                     borderRadius: '8px',
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    background: 'rgba(255, 255, 255, 0.6)',
                     border: '1px dashed var(--border-medium)',
                     color: 'var(--text-secondary)',
                     width: '100%',
