@@ -168,3 +168,21 @@ def test_api_against_postgres(monkeypatch):
     data = _walk(c, aid)
     assert data["evaluation"]["scenarios_detected"] == 2
     assert data["details"][0]["evidence"]
+
+
+def test_t6_log_with_corrupted_nul_lines_is_analysed_not_rejected(client):
+    """A crash can leave NUL bytes / junk in a log; bad lines are skipped, the rest analysed."""
+    good = "Oct  4 02:03:11 web01 sshd[1]: Failed password for root from 185.220.101.7 port 1 ssh2\n"
+    junk = "\x00\x00\x01\x02 binary junk \xff\n".encode("latin-1")
+    data = b"".join(good.encode() + (junk if k % 5 == 0 else b"") for k in range(40))
+    r = client.post("/api/analyze", files=[("files", ("messy_auth.log", data, "text/plain"))])
+    assert r.status_code == 200, r.text
+    stats = r.json()["stats"]
+    assert stats["parsed"] == 40 and stats["skipped"] == 8 and stats["incidents"] == 1
+
+
+def test_real_binaries_still_rejected(client):
+    for name, blob in [("a.png", b"\x89PNG\r\n\x1a\n" + b"x" * 50), ("a.zip", b"PK\x03\x04" + b"x" * 50),
+                       ("a.gz", b"\x1f\x8b\x08" + b"x" * 50), ("raw.bin", bytes(range(32)) * 20)]:
+        r = client.post("/api/analyze", files=[("files", (name, blob, "application/octet-stream"))])
+        assert r.status_code == 400 and "binary" in r.json()["detail"], name

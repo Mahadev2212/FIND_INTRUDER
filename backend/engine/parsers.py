@@ -391,11 +391,21 @@ def detect_format(content: str, sample_size: int = 50) -> Optional[str]:
     return "auth" if auth >= access else "access"
 
 
+BINARY_SIGNATURES = (b"\x89PNG", b"\xff\xd8\xff", b"GIF8", b"%PDF", b"PK\x03\x04", b"\x1f\x8b",
+                     b"\x7fELF", b"MZ", b"BM", b"RIFF", b"\x00\x00\x01\x00")
+
+
 def decode_upload(data: bytes, filename: str) -> str:
-    """Decode an uploaded file; reject binary content with a clear error."""
-    if b"\x00" in data[:8192]:
+    """
+    Decode an uploaded file; reject real binary files with a clear error.
+    A log with a few corrupted lines (NUL bytes after a crash, junk) is NOT binary: those bytes are
+    removed and the damaged lines are skipped and counted by the parser (PRD T6).
+    """
+    sample = data[:8192]
+    controls = sum(1 for b in sample if b < 9 or 13 < b < 32)
+    if sample.startswith(BINARY_SIGNATURES) or (sample and controls / len(sample) > 0.10):
         raise ValueError(f"'{filename}' looks like a binary file. Supported formats: {SUPPORTED_FORMATS}.")
-    return data.decode("utf-8", errors="replace")
+    return data.replace(b"\x00", b"").decode("utf-8", errors="replace")
 
 
 def auto_detect_and_parse(content: str, filename: str) -> ParseResult:
