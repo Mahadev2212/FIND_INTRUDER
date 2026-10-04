@@ -55,3 +55,6 @@ thresholds:
 parsing:
   default_year: 2026            # syslog lines have no year; rollover Dec→Jan is handled automatically
   auth_utc_offset_minutes: 0    # syslog lines have no timezone; offset of the server clock from UTC
+
+storage:
+  max_analyses: 50              # keep only the newest N analyses (free-tier Postgres is small); 0 = keep all

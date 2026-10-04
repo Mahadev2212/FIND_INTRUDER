@@ -58,6 +58,15 @@ def _save(source: str, result) -> dict:
                             has_ground_truth=result.evaluation is not None).model_dump()
 
 
+def _valid_id(analysis_id: str) -> str:
+    """Analysis IDs are UUIDs; anything else is simply 'not found' (Postgres would raise a type error)."""
+    try:
+        uuid.UUID(analysis_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    return analysis_id
+
+
 def _found(value, what: str = "Analysis"):
     if value is None:
         raise HTTPException(status_code=404, detail=f"{what} not found")
@@ -116,21 +125,33 @@ def list_all_analyses():
     return _read(store.list_analyses)
 
 
+@app.delete("/api/analyses/{analysis_id}", status_code=204)
+def delete_analysis(analysis_id: str):
+    """Delete an analysis and all its events, alerts, incidents and entities."""
+    _valid_id(analysis_id)
+    if not _read(store.delete, analysis_id):
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    return Response(status_code=204)
+
+
 @app.get("/api/analyses/{analysis_id}/summary")
 def get_summary(analysis_id: str):
     """Overview cards + events-over-time histogram + top entities."""
+    _valid_id(analysis_id)
     return _found(_read(store.summary, analysis_id))
 
 
 @app.get("/api/analyses/{analysis_id}/incidents")
 def get_incidents(analysis_id: str):
     """Incident list sorted by risk (without story)."""
+    _valid_id(analysis_id)
     return _found(_read(store.incidents, analysis_id))
 
 
 @app.get("/api/analyses/{analysis_id}/incidents/{incident_id}")
 def get_incident_detail(analysis_id: str, incident_id: str):
     """Full incident with story, alerts and evidence raw lines."""
+    _valid_id(analysis_id)
     _found(_read(store.exists, analysis_id) or None)
     return _found(_read(store.incident_detail, analysis_id, incident_id), "Incident")
 
@@ -138,6 +159,7 @@ def get_incident_detail(analysis_id: str, incident_id: str):
 @app.get("/api/analyses/{analysis_id}/incidents/{incident_id}/report")
 def get_incident_report(analysis_id: str, incident_id: str, format: str = Query("md", pattern="^(md|json)$")):
     """Downloadable incident report: Markdown (story, timeline, evidence) or the full JSON."""
+    _valid_id(analysis_id)
     _found(_read(store.exists, analysis_id) or None)
     detail = _found(_read(store.incident_detail, analysis_id, incident_id), "Incident")
     filename = f"chaintrace-{incident_id}"
@@ -150,12 +172,14 @@ def get_incident_report(analysis_id: str, incident_id: str, format: str = Query(
 @app.get("/api/analyses/{analysis_id}/entities")
 def get_entities(analysis_id: str):
     """Risk-scored IPs and users."""
+    _valid_id(analysis_id)
     return _found(_read(store.entities, analysis_id))
 
 
 @app.get("/api/analyses/{analysis_id}/evaluation")
 def get_evaluation(analysis_id: str):
     """Precision/recall metrics (simulated runs only)."""
+    _valid_id(analysis_id)
     _found(_read(store.exists, analysis_id) or None)
     evaluation = _read(store.evaluation, analysis_id)
     if not evaluation:

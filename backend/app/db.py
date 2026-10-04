@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.schemas import Alert, Entity, Event, Incident
+from engine.config import CFG
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 SCHEMA_SQL = BACKEND_DIR / "db" / "schema.sql"
@@ -40,6 +41,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 class StorageUnavailable(RuntimeError):
     pass
+
+
+def max_analyses() -> int:
+    """Retention: keep the newest N analyses (0 = unlimited)."""
+    return int((CFG.get("storage") or {}).get("max_analyses", 0) or 0)
 
 
 # ─── API shapes (shared by both stores so responses are identical) ────────────
@@ -94,6 +100,14 @@ class MemoryStore:
 
     def save(self, analysis_id: str, source: str, result) -> None:
         self._data[analysis_id] = {"created_at": datetime.now().astimezone(), "source": source, "result": result}
+        keep = max_analyses()
+        if keep and len(self._data) > keep:
+            oldest = sorted(self._data, key=lambda k: self._data[k]["created_at"])[:len(self._data) - keep]
+            for k in oldest:
+                del self._data[k]
+
+    def delete(self, analysis_id: str) -> bool:
+        return self._data.pop(analysis_id, None) is not None
 
     def _get(self, analysis_id: str):
         return self._data.get(analysis_id)
@@ -224,6 +238,11 @@ class PostgresStore:
                         for e in result.entities:
                             cp.write_row((aid, e.type.value, e.value, e.risk_score, e.level.value,
                                           e.alert_count, e.first_seen, e.last_seen))
+
+                    keep = max_analyses()
+                    if keep:  # retention; ON DELETE CASCADE removes the old analyses' rows
+                        cur.execute("DELETE FROM analyses WHERE id IN (SELECT id FROM analyses "
+                                    "ORDER BY created_at DESC, id OFFSET %s)", (keep,))
         except self._psycopg.OperationalError as exc:
             raise StorageUnavailable("storage unavailable") from exc
 
@@ -235,6 +254,15 @@ class PostgresStore:
 
     def exists(self, analysis_id: str) -> bool:
         return bool(self._query("SELECT 1 FROM analyses WHERE id = %s", (analysis_id,)))
+
+    def delete(self, analysis_id: str) -> bool:
+        """Delete one analysis; events/alerts/incidents/entities go with it (ON DELETE CASCADE)."""
+        try:
+            with self._connect() as conn, conn.cursor() as cur:
+                cur.execute("DELETE FROM analyses WHERE id = %s RETURNING id", (analysis_id,))
+                return cur.fetchone() is not None
+        except self._psycopg.OperationalError as exc:
+            raise StorageUnavailable("storage unavailable") from exc
 
     _INC_COLS = "id, title, risk_score, level, entities, start_ts, end_ts, stages, alert_ids, summary, recommendation"
 
