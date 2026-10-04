@@ -26,64 +26,100 @@ const API_BASE = 'http://127.0.0.1:8000/api';
 function NetworkGlobeSvg() {
   return (
     <svg
-      width="340"
-      height="230"
-      viewBox="0 0 340 230"
+      width="540"
+      height="240"
+      viewBox="0 0 540 240"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       style={{
         position: 'absolute',
-        right: '250px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        opacity: 0.65,
+        right: '0',
+        top: '0',
+        bottom: '0',
+        width: '540px',
+        height: '100%',
+        opacity: 0.85,
         pointerEvents: 'none',
         zIndex: 1,
+        overflow: 'hidden',
       }}
     >
       <defs>
-        <radialGradient id="globeGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FED7AA" stopOpacity="0.45" />
-          <stop offset="60%" stopColor="#FDBA74" stopOpacity="0.18" />
+        <radialGradient id="heroGlobeRadialGlow" cx="68%" cy="50%" r="52%">
+          <stop offset="0%" stopColor="#FED7AA" stopOpacity="0.7" />
+          <stop offset="35%" stopColor="#FDBA74" stopOpacity="0.32" />
+          <stop offset="70%" stopColor="#FB923C" stopOpacity="0.08" />
           <stop offset="100%" stopColor="#F97316" stopOpacity="0" />
         </radialGradient>
+        <linearGradient id="heroRibbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#EA580C" stopOpacity="0.6" />
+          <stop offset="50%" stopColor="#F59E0B" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#FDBA74" stopOpacity="0.1" />
+        </linearGradient>
       </defs>
 
-      {/* Warm Ambient Radial Glow */}
-      <circle cx="170" cy="115" r="105" fill="url(#globeGlow)" />
+      {/* Atmospheric Warm Glowing Backdrop */}
+      <ellipse cx="370" cy="120" rx="150" ry="110" fill="url(#heroGlobeRadialGlow)" />
 
-      {/* Outer Silhouette Circles */}
-      <circle cx="170" cy="115" r="95" stroke="#E07A5F" strokeWidth="1.2" strokeDasharray="3 3" opacity="0.7" />
-      <circle cx="170" cy="115" r="94" stroke="#EA580C" strokeWidth="0.6" opacity="0.4" />
-      <circle cx="170" cy="115" r="76" stroke="#E07A5F" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.45" />
+      {/* Sinuous 3D Ribbon Contours Sweeping Across Hero */}
+      <path d="M 40 25 C 160 70, 250 15, 360 115 C 430 170, 480 85, 545 105" stroke="#FDBA74" strokeWidth="1.2" strokeDasharray="3 4" fill="none" opacity="0.65" />
+      <path d="M 70 45 C 180 90, 270 30, 365 130 C 435 185, 485 105, 545 125" stroke="#F97316" strokeWidth="0.9" fill="none" opacity="0.5" />
+      <path d="M 110 65 C 210 110, 290 50, 370 145 C 430 195, 490 125, 545 145" stroke="#E07A5F" strokeWidth="0.8" strokeDasharray="2 3" fill="none" opacity="0.45" />
+      <path d="M 10 15 C 130 50, 220 5, 340 95 C 410 145, 465 65, 545 85" stroke="#FED7AA" strokeWidth="1.4" fill="none" opacity="0.75" />
 
-      {/* Tilted Elliptical Coordinate Mesh */}
-      <g transform="rotate(-15 170 115)">
+      {/* 3D Spherical Coordinate Wireframe */}
+      <g transform="rotate(-12 370 120)">
+        {/* Silhouette Outlines */}
+        <circle cx="370" cy="120" r="98" stroke="#EA580C" strokeWidth="0.8" opacity="0.35" fill="none" />
+        <circle cx="370" cy="120" r="97" stroke="#F59E0B" strokeWidth="1.2" strokeDasharray="3 4" opacity="0.65" fill="none" />
+        <circle cx="370" cy="120" r="78" stroke="#E07A5F" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.45" fill="none" />
+
         {/* Latitudes */}
-        <ellipse cx="170" cy="115" rx="94" ry="72" stroke="#EA580C" strokeWidth="0.8" opacity="0.5" />
-        <ellipse cx="170" cy="115" rx="94" ry="40" stroke="#E07A5F" strokeWidth="0.9" strokeDasharray="3 3" opacity="0.55" />
-        <ellipse cx="170" cy="115" rx="94" ry="16" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" />
-        <ellipse cx="170" cy="85" rx="86" ry="24" stroke="#F97316" strokeWidth="0.75" opacity="0.4" />
-        <ellipse cx="170" cy="145" rx="86" ry="24" stroke="#F97316" strokeWidth="0.75" opacity="0.4" />
+        <ellipse cx="370" cy="120" rx="97" ry="76" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" fill="none" />
+        <ellipse cx="370" cy="120" rx="97" ry="46" stroke="#F59E0B" strokeWidth="0.85" strokeDasharray="3 3" opacity="0.55" fill="none" />
+        <ellipse cx="370" cy="120" rx="97" ry="18" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" fill="none" />
+        <ellipse cx="370" cy="90" rx="88" ry="26" stroke="#F97316" strokeWidth="0.75" opacity="0.4" fill="none" />
+        <ellipse cx="370" cy="150" rx="88" ry="26" stroke="#F97316" strokeWidth="0.75" opacity="0.4" fill="none" />
+        <ellipse cx="370" cy="65" rx="72" ry="20" stroke="#FDBA74" strokeWidth="0.6" opacity="0.35" fill="none" />
+        <ellipse cx="370" cy="175" rx="72" ry="20" stroke="#FDBA74" strokeWidth="0.6" opacity="0.35" fill="none" />
 
         {/* Longitudes */}
-        <ellipse cx="170" cy="115" rx="42" ry="94" stroke="#EA580C" strokeWidth="0.9" opacity="0.5" />
-        <ellipse cx="170" cy="115" rx="72" ry="94" stroke="#E07A5F" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.45" />
-        <line x1="76" y1="115" x2="264" y2="115" stroke="#EA580C" strokeWidth="0.8" opacity="0.5" />
-        <line x1="170" y1="21" x2="170" y2="209" stroke="#EA580C" strokeWidth="0.8" opacity="0.5" />
+        <ellipse cx="370" cy="120" rx="44" ry="97" stroke="#EA580C" strokeWidth="0.85" opacity="0.45" fill="none" />
+        <ellipse cx="370" cy="120" rx="74" ry="97" stroke="#F59E0B" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.45" fill="none" />
+        <line x1="273" y1="120" x2="467" y2="120" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" />
+        <line x1="370" y1="23" x2="370" y2="217" stroke="#EA580C" strokeWidth="0.8" opacity="0.45" />
 
-        {/* Glowing Network Node Coordinates */}
-        <circle cx="135" cy="95" r="3.5" fill="#EA580C" />
-        <circle cx="135" cy="95" r="7" stroke="#F97316" strokeWidth="0.8" opacity="0.5" />
-        <circle cx="212" cy="132" r="3.5" fill="#E07A5F" />
-        <circle cx="188" cy="70" r="2.5" fill="#F97316" />
-        <circle cx="118" cy="136" r="3" fill="#EA580C" />
-        <circle cx="225" cy="90" r="2.5" fill="#F4C7A1" />
-        <circle cx="160" cy="160" r="2.5" fill="#E07A5F" />
-        
-        {/* Threat trajectory arc */}
-        <path d="M 135 95 Q 170 75 212 132" stroke="#EF4444" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.75" />
-        <circle cx="212" cy="132" r="4.5" fill="#EF4444" opacity="0.85" />
+        {/* Dense Glowing Dotted Coordinate Matrix */}
+        {[
+          [335, 95, 3.5, '#EA580C', 0.9],
+          [412, 132, 3.5, '#E07A5F', 0.9],
+          [388, 70, 2.5, '#F97316', 0.8],
+          [318, 136, 3, '#EA580C', 0.85],
+          [425, 90, 2.8, '#F4C7A1', 0.9],
+          [360, 160, 2.5, '#E07A5F', 0.8],
+          [345, 120, 2.5, '#F59E0B', 0.75],
+          [395, 120, 3, '#EA580C', 0.8],
+          [370, 75, 2.5, '#F59E0B', 0.75],
+          [370, 165, 2.5, '#F97316', 0.7],
+          [305, 110, 2, '#FED7AA', 0.85],
+          [435, 125, 2.2, '#FED7AA', 0.85],
+          [350, 50, 2.2, '#FDBA74', 0.7],
+          [390, 190, 2, '#FDBA74', 0.7],
+          [320, 80, 2.2, '#EA580C', 0.65],
+          [420, 155, 2.4, '#E07A5F', 0.7],
+          [355, 100, 2, '#F59E0B', 0.8],
+          [385, 140, 2.2, '#F97316', 0.75],
+        ].map(([cx, cy, r, fill, op], idx) => (
+          <g key={idx}>
+            <circle cx={cx} cy={cy} r={r} fill={fill} opacity={op} />
+            <circle cx={cx} cy={cy} r={Number(r) * 1.8} stroke={fill} strokeWidth="0.6" opacity={Number(op) * 0.4} fill="none" />
+          </g>
+        ))}
+
+        {/* Threat Trajectory Arc */}
+        <path d="M 335 95 Q 370 70 412 132" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.85" />
+        <circle cx="412" cy="132" r="5" fill="#EF4444" opacity="0.9" />
+        <circle cx="412" cy="132" r="9" stroke="#EF4444" strokeWidth="0.8" opacity="0.5" fill="none" />
       </g>
     </svg>
   );
@@ -92,33 +128,18 @@ function NetworkGlobeSvg() {
 function WaveLinesSvg() {
   return (
     <svg
-      width="160"
-      height="70"
-      viewBox="0 0 160 70"
+      width="100%"
+      height="80"
+      viewBox="0 0 190 80"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ opacity: 0.5, pointerEvents: 'none', margin: '16px auto 8px auto' }}
+      style={{ opacity: 0.6, pointerEvents: 'none', margin: '20px 0 10px 0' }}
     >
-      <path
-        d="M-10 35 C30 10, 80 60, 130 25 C150 12, 170 48, 180 35"
-        stroke="#EA580C"
-        strokeWidth="1.2"
-        fill="none"
-      />
-      <path
-        d="M-10 48 C30 22, 80 72, 130 38 C150 25, 170 60, 180 48"
-        stroke="#F97316"
-        strokeWidth="1"
-        strokeDasharray="2 3"
-        fill="none"
-      />
-      <path
-        d="M-10 22 C30 2, 80 50, 130 16 C150 5, 170 38, 180 22"
-        stroke="#E07A5F"
-        strokeWidth="0.8"
-        opacity="0.6"
-        fill="none"
-      />
+      <path d="M -10 38 C 35 15, 85 62, 135 28 C 158 12, 180 50, 200 35" stroke="#EA580C" strokeWidth="1.2" fill="none" opacity="0.8" />
+      <path d="M -10 48 C 35 25, 85 72, 135 38 C 158 22, 180 60, 200 45" stroke="#F97316" strokeWidth="1" strokeDasharray="2 3" fill="none" opacity="0.65" />
+      <path d="M -10 28 C 35 5, 85 52, 135 18 C 158 2, 180 40, 200 25" stroke="#E07A5F" strokeWidth="0.8" fill="none" opacity="0.5" />
+      <path d="M -10 58 C 35 35, 85 82, 135 48 C 158 32, 180 70, 200 55" stroke="#FDBA74" strokeWidth="0.75" fill="none" opacity="0.4" />
+      <path d="M -10 18 C 35 -5, 85 42, 135 8 C 158 -8, 180 30, 200 15" stroke="#F59E0B" strokeWidth="0.7" strokeDasharray="3 3" fill="none" opacity="0.35" />
     </svg>
   );
 }
@@ -462,23 +483,29 @@ export default function App() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-app)' }}>
+    <div style={{
+      minHeight: '100vh',
+      padding: '16px 20px 24px 20px',
+      maxWidth: '1580px',
+      margin: '0 auto',
+      display: 'flex',
+      flexDirection: 'column',
+      position: 'relative',
+    }}>
       
-      {/* ─── TOP HEADER BAR (Single Source of Truth Aesthetic) ─────────────── */}
-      <header style={{
-        background: 'var(--bg-header)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid var(--border-subtle)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        padding: '0 28px',
+      {/* ─── FLOATING TOP HEADER BAR (Exact Reference Match) ────────────────── */}
+      <header className="glass-panel" style={{
+        padding: '10px 22px',
+        marginBottom: '16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: '64px',
-        boxShadow: '0 2px 10px rgba(120, 90, 60, 0.03)',
+        borderRadius: '22px',
+        background: 'rgba(255, 255, 255, 0.74)',
+        backdropFilter: 'blur(28px)',
+        WebkitBackdropFilter: 'blur(28px)',
+        boxShadow: '0 8px 30px rgba(120, 85, 50, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95)',
+        border: '1px solid rgba(255, 255, 255, 0.9)',
       }}>
         {/* Left: Brand Logo & Top Route Nav */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -488,31 +515,31 @@ export default function App() {
             onClick={() => setActiveTab('overview')}
           >
             <div style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.15), rgba(251, 146, 60, 0.1))',
-              border: '1px solid rgba(234, 88, 12, 0.4)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #FF9944 0%, #FF6622 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.5)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#EA580C',
-              boxShadow: '0 2px 8px rgba(234, 88, 12, 0.15)',
+              color: '#FFFFFF',
+              boxShadow: '0 4px 12px rgba(255, 102, 34, 0.3)',
             }}>
-              <ShieldAlert size={19} strokeWidth={2.4} />
+              <ShieldAlert size={20} strokeWidth={2.4} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em', color: '#111827', lineHeight: 1.1 }}>
+              <div style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.02em', color: '#111827', lineHeight: 1.1 }}>
                 ChainTrace
               </div>
-              <div style={{ fontSize: '0.62rem', color: '#EA580C', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '0.64rem', color: '#EA580C', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 ALG-CYBER-01 • THREAT OPS
               </div>
             </div>
           </div>
 
           {/* Top Route Navigation Pills */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {navItems.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id || (activeTab === 'incident-detail' && tab.id === 'incidents');
@@ -520,20 +547,22 @@ export default function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={isActive ? 'nav-pill-active' : ''}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '7px',
-                    padding: '7px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid transparent',
-                    background: 'transparent',
+                    padding: '6px 14px',
+                    borderRadius: '10px',
+                    border: isActive ? '1px solid rgba(255, 175, 130, 0.7)' : '1px solid transparent',
+                    background: isActive ? 'linear-gradient(135deg, #FFEFE4 0%, #FFDECC 100%)' : 'transparent',
                     color: isActive ? '#111827' : 'var(--text-secondary)',
+                    boxShadow: isActive ? '0 2px 8px rgba(234, 88, 12, 0.12)' : 'none',
                     fontWeight: isActive ? 700 : 500,
                     fontSize: '0.84rem',
                     cursor: 'pointer',
                     transition: 'all 0.18s ease',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                   }}
                 >
                   <Icon size={14} color={isActive ? '#EA580C' : 'var(--text-muted)'} />
@@ -545,17 +574,19 @@ export default function App() {
         </div>
 
         {/* Right: Dataset Selector, Live Backend Status, Refresh & User Avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           {/* Active Dataset Dropdown Pill */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            background: 'rgba(255, 255, 255, 0.85)',
+            background: 'rgba(255, 255, 255, 0.75)',
             padding: '5px 12px',
             borderRadius: '20px',
             border: '1px solid var(--border-subtle)',
-            boxShadow: '0 1px 4px rgba(120, 90, 60, 0.05)',
+            boxShadow: '0 1px 4px rgba(120, 90, 60, 0.04)',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}>
             <Database size={13} color="#EA580C" />
             <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
@@ -592,14 +623,16 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '5px 12px',
+              padding: '6px 14px',
               borderRadius: '20px',
-              background: (backendAlive && !useMocks) ? 'rgba(22, 163, 74, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-              border: `1px solid ${(backendAlive && !useMocks) ? 'rgba(22, 163, 74, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+              background: (backendAlive && !useMocks) ? 'rgba(220, 252, 231, 0.85)' : 'rgba(239, 68, 68, 0.12)',
+              border: `1px solid ${(backendAlive && !useMocks) ? 'rgba(134, 239, 172, 0.7)' : 'rgba(239, 68, 68, 0.35)'}`,
               cursor: 'pointer',
               fontSize: '0.72rem',
               fontWeight: 800,
               letterSpacing: '0.02em',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             <span className={backendAlive && !useMocks ? 'pulse-green' : ''} style={{
@@ -607,6 +640,7 @@ export default function App() {
               height: '6px',
               borderRadius: '50%',
               background: (backendAlive && !useMocks) ? '#16A34A' : '#EF4444',
+              flexShrink: 0,
             }} />
             <span style={{ color: (backendAlive && !useMocks) ? '#15803D' : '#DC2626' }}>
               {(backendAlive && !useMocks) ? 'LIVE BACKEND :8000' : (useMocks ? 'OFFLINE MOCKS' : 'BACKEND OFFLINE')}
@@ -631,6 +665,7 @@ export default function App() {
               color: 'var(--text-secondary)',
               transition: 'all 0.15s ease',
               boxShadow: '0 1px 4px rgba(120, 90, 60, 0.05)',
+              flexShrink: 0,
             }}
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -638,8 +673,8 @@ export default function App() {
 
           {/* User Profile Avatar */}
           <div style={{
-            width: '32px',
-            height: '32px',
+            width: '34px',
+            height: '34px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%)',
             border: '1px solid rgba(234, 88, 12, 0.4)',
@@ -650,25 +685,31 @@ export default function App() {
             fontWeight: 800,
             color: '#7C2D12',
             boxShadow: '0 2px 6px rgba(234, 88, 12, 0.18)',
+            flexShrink: 0,
           }}>
             M
           </div>
         </div>
       </header>
 
-      {/* ─── MAIN LAYOUT (Left Sidebar + Main Content) ───────────────────────── */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 'calc(100vh - 64px)' }}>
+      {/* ─── MAIN LAYOUT (Floating Left Sidebar + Main Content) ─────────────── */}
+      <div style={{ display: 'flex', gap: '16px', flex: 1, alignItems: 'stretch' }}>
         
-        {/* Left Sidebar (Matching Reference Design) */}
-        <aside style={{
-          width: '210px',
-          background: 'var(--bg-sidebar)',
-          borderRight: '1px solid var(--border-subtle)',
+        {/* Floating Left Sidebar (Exact Reference Match) */}
+        <aside className="glass-panel" style={{
+          width: '215px',
+          flexShrink: 0,
           padding: '20px 14px',
+          borderRadius: '24px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          flexShrink: 0,
+          background: 'rgba(255, 255, 255, 0.70)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          boxShadow: '0 10px 35px rgba(120, 85, 50, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95)',
+          border: '1px solid rgba(255, 255, 255, 0.9)',
+          minHeight: '840px',
         }}>
           {/* Top Sidebar Links */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -679,16 +720,16 @@ export default function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={isActive ? 'nav-pill-active' : ''}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
                     padding: '9px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid transparent',
-                    background: 'transparent',
-                    color: isActive ? '#111827' : 'var(--text-secondary)',
+                    borderRadius: '12px',
+                    border: isActive ? '1px solid rgba(255, 180, 140, 0.7)' : '1px solid transparent',
+                    background: isActive ? 'linear-gradient(135deg, #FFF0E6 0%, #FFDFC8 100%)' : 'transparent',
+                    color: isActive ? '#C2410C' : 'var(--text-secondary)',
+                    boxShadow: isActive ? '0 4px 12px rgba(234, 88, 12, 0.14)' : 'none',
                     fontWeight: isActive ? 700 : 500,
                     fontSize: '0.84rem',
                     cursor: 'pointer',
@@ -773,7 +814,7 @@ export default function App() {
         </aside>
 
         {/* Right Main Content Viewport */}
-        <main style={{ flex: 1, padding: '24px 28px', maxWidth: '1440px', width: '100%', overflowY: 'auto' }}>
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
           
           {/* Sleek Dismissible Toast Notification */}
           {successMsg && (
@@ -900,22 +941,22 @@ export default function App() {
                 style={{
                   position: 'relative',
                   overflow: 'hidden',
-                  padding: '26px 32px',
-                  marginBottom: '20px',
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 250, 245, 0.72) 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.95)',
+                  padding: '28px 36px',
+                  borderRadius: '22px',
+                  minHeight: '185px',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 248, 240, 0.65) 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.92)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  flexWrap: 'wrap',
                   gap: '20px',
                 }}
               >
-                {/* Background Network Globe SVG */}
+                {/* Background 3D Network Globe & Parametric Wave SVG */}
                 <NetworkGlobeSvg />
 
                 {/* Left Text Content */}
-                <div style={{ position: 'relative', zIndex: 2, maxWidth: '720px' }}>
+                <div style={{ position: 'relative', zIndex: 2, maxWidth: '640px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <span className="pulse-green" />
                     <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -923,24 +964,41 @@ export default function App() {
                     </span>
                   </div>
 
-                  <h1 style={{ fontSize: '1.68rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-                    Correlating <span style={{ color: '#E05328' }}>Multi-Stage Cyber Attacks</span> from Raw Server Logs
+                  <h1 style={{ fontSize: '1.9rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1.22 }}>
+                    Correlating <span style={{ color: '#FF5A36' }}>Multi-Stage Cyber Attacks</span> from Raw Server Logs
                   </h1>
 
-                  <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                    Automated kill-chain grouping, IP-to-User pivot tracking, and explainable rule heuristics (R1-R11).
+                  <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
+                    Automated kill-chain grouping, IP-to-User pivot tracking, and explainable rule heuristics (RI-R11).
                   </p>
                 </div>
 
-                {/* Right CTA Button (Peach Gradient) */}
-                <div style={{ position: 'relative', zIndex: 2 }}>
+                {/* Right CTA Button (Fiery Orange/Coral Gradient with Arrow) */}
+                <div style={{ position: 'relative', zIndex: 2, flexShrink: 0 }}>
                   <button 
-                    className="btn-peach" 
                     onClick={handleRunSimulation}
                     disabled={simulating}
+                    style={{
+                      background: 'linear-gradient(90deg, #FF7A45 0%, #FF4D4F 100%)',
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                      fontSize: '0.92rem',
+                      padding: '12px 24px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255, 255, 255, 0.4)',
+                      boxShadow: '0 8px 24px rgba(255, 90, 54, 0.42), 0 2px 6px rgba(255, 90, 54, 0.2)',
+                      cursor: simulating ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    }}
+                    onMouseEnter={(e) => { if (!simulating) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
                   >
-                    {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} fill="#ffffff" />}
+                    {simulating ? <RefreshCw className="animate-spin" size={16} /> : <Play size={15} fill="#ffffff" />}
                     <span>{simulating ? 'Injecting S1-S5 & Scoring...' : 'Run Live Attack Simulation'}</span>
+                    <ArrowRight size={15} strokeWidth={2.4} />
                   </button>
                 </div>
               </div>
@@ -1318,7 +1376,8 @@ export default function App() {
                     {/* Table Header */}
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: '1.4fr 1fr 0.8fr 0.6fr',
+                      gridTemplateColumns: '1.65fr 1.15fr 0.8fr 0.5fr',
+                      gap: '8px',
                       padding: '8px 12px',
                       fontSize: '0.68rem',
                       fontWeight: 700,
@@ -1347,7 +1406,8 @@ export default function App() {
                           onClick={() => setActiveTab('entities')}
                           style={{
                             display: 'grid',
-                            gridTemplateColumns: '1.4fr 1fr 0.8fr 0.6fr',
+                            gridTemplateColumns: '1.65fr 1.15fr 0.8fr 0.5fr',
+                            gap: '8px',
                             alignItems: 'center',
                             padding: '10px 12px',
                             borderBottom: i < 4 ? '1px solid rgba(220, 210, 195, 0.4)' : 'none',
@@ -1415,10 +1475,11 @@ export default function App() {
               <div 
                 className="glass-panel" 
                 style={{
-                  padding: '18px 24px',
-                  border: '1px solid rgba(239, 68, 68, 0.28)',
-                  background: 'linear-gradient(135deg, rgba(254, 226, 226, 0.6) 0%, rgba(255, 255, 255, 0.8) 100%)',
-                  boxShadow: '0 8px 30px rgba(239, 68, 68, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.95)',
+                  padding: '18px 26px',
+                  border: '1px solid rgba(252, 165, 165, 0.65)',
+                  background: 'linear-gradient(90deg, rgba(254, 226, 226, 0.75) 0%, rgba(255, 241, 242, 0.6) 50%, rgba(255, 247, 237, 0.6) 100%)',
+                  boxShadow: '0 10px 32px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95)',
+                  borderRadius: '20px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -1431,14 +1492,13 @@ export default function App() {
                   <div style={{
                     width: '44px',
                     height: '44px',
-                    borderRadius: '10px',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #FF5555 0%, #DC2626 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#DC2626',
-                    boxShadow: '0 2px 10px rgba(239, 68, 68, 0.2)',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
                     flexShrink: 0,
                   }}>
                     <ShieldAlert size={24} strokeWidth={2.4} />
@@ -1473,17 +1533,17 @@ export default function App() {
                   <span style={{
                     background: '#EF4444',
                     color: '#ffffff',
-                    fontSize: '0.72rem',
+                    fontSize: '0.74rem',
                     fontWeight: 900,
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    letterSpacing: '0.05em',
-                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)',
+                    padding: '4px 14px',
+                    borderRadius: '9999px',
+                    letterSpacing: '0.04em',
+                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
                   }}>
                     CRITICAL
                   </span>
 
-                  <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                     2024-10-04 02:17:32
                   </span>
 
@@ -1501,25 +1561,25 @@ export default function App() {
                       padding: '8px 18px',
                       fontSize: '0.84rem',
                       fontWeight: 700,
-                      borderRadius: '8px',
-                      background: 'rgba(255, 247, 237, 0.95)',
-                      border: '1px solid rgba(234, 88, 12, 0.4)',
+                      borderRadius: '10px',
+                      background: 'rgba(255, 245, 235, 0.95)',
+                      border: '1px solid rgba(254, 215, 170, 0.9)',
                       color: '#9A3412',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
-                      boxShadow: '0 2px 6px rgba(234, 88, 12, 0.1)',
+                      boxShadow: '0 2px 6px rgba(234, 88, 12, 0.08)',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = '#ffffff';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(234, 88, 12, 0.2)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(234, 88, 12, 0.18)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 247, 237, 0.95)';
-                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(234, 88, 12, 0.1)';
+                      e.currentTarget.style.background = 'rgba(255, 245, 235, 0.95)';
+                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(234, 88, 12, 0.08)';
                     }}
                   >
                     <span>Examine Story & Evidence</span>
-                    <ArrowRight size={14} />
+                    <ArrowRight size={14} strokeWidth={2.4} />
                   </button>
                 </div>
               </div>
@@ -2469,11 +2529,9 @@ export default function App() {
         </main>
       </div>
 
-      {/* ─── FOOTER BAR ─────────────────────────────────────────────────────── */}
+      {/* ─── FOOTER BAR (Minimal & Floating) ────────────────────────────────── */}
       <footer style={{
-        background: 'var(--bg-sidebar)',
-        borderTop: '1px solid var(--border-subtle)',
-        padding: '12px 28px',
+        padding: '16px 8px 4px 8px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
