@@ -15,8 +15,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import uvicorn
 
-# Add backend to path for engine imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add backend and workspace root to path for engine and simulator imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+root_dir = os.path.dirname(backend_dir)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
 
 from app.schemas import AnalysisStats, SimulateRequest, AnalysisResponse
 from app.db import get_analysis, list_analyses, save_analysis
@@ -198,11 +203,18 @@ async def simulate(body: SimulateRequest):
     auth_out = os.path.join(sim_dir, "combined_auth.log")
     access_out = os.path.join(sim_dir, "combined_access.log")
     labels_out = os.path.join(sim_dir, "labels.json")
+    base_auth = os.path.join(sim_dir, "baseline_auth.log")
+    base_access = os.path.join(sim_dir, "baseline_access.log")
+
+    if not os.path.exists(base_auth) or not os.path.exists(base_access):
+        from simulator.baseline import gen_auth_log, gen_access_log
+        gen_auth_log(base_auth)
+        gen_access_log(base_access)
 
     from simulator.attacks import inject_attacks
     inject_attacks(
-        auth_input=os.path.join(sim_dir, "baseline_auth.log"),
-        access_input=os.path.join(sim_dir, "baseline_access.log"),
+        auth_input=base_auth,
+        access_input=base_access,
         auth_output=auth_out,
         access_output=access_out,
         labels_output=labels_out,
