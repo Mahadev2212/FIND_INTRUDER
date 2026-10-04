@@ -68,7 +68,7 @@ def gen_auth_log(output_file="simulator/baseline_auth.log"):
     with open(output_file, "w") as f:
         f.write("\n".join(lines) + "\n")
 
-    print(f"[baseline] auth.log written: {len(lines)} lines → {output_file}")
+    print(f"[baseline] auth.log written: {len(lines)} lines -> {output_file}")
 
 
 def gen_access_log(output_file="simulator/baseline_access.log"):
@@ -97,7 +97,7 @@ def gen_access_log(output_file="simulator/baseline_access.log"):
     with open(output_file, "w") as f:
         f.write("\n".join(lines) + "\n")
 
-    print(f"[baseline] access.log written: {len(lines)} lines → {output_file}")
+    print(f"[baseline] access.log written: {len(lines)} lines -> {output_file}")
 
 
 if __name__ == "__main__":

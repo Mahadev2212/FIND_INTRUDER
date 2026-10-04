@@ -39,7 +39,7 @@ SUDO_RE = re.compile(
 )
 # useradd
 USERADD_RE = re.compile(
-    r'new user: name=(\S+)'
+    r'new user: name=([^,\s]+)'
 )
 # usermod (adding to sudo/wheel group)
 USERMOD_SUDO_RE = re.compile(
@@ -53,7 +53,7 @@ ACCESS_COMBINED_RE = re.compile(
     r'^(\S+)'                                # IP
     r'\s+\S+\s+\S+'                         # ident, user
     r'\s+\[(.+?)\]'                         # [datetime]
-    r'\s+"(\w+)\s+(\S+)\s+\S+"'            # "METHOD path HTTP/ver"
+    r'\s+"([A-Za-z]+)\s+(.+?)(?:\s+HTTP/[^\s"]+)?"'  # "METHOD path HTTP/ver"
     r'\s+(\d+)'                             # status
     r'\s+(\d+|-)'                           # bytes
     r'(?:\s+".*?")?'                        # referer (optional)
@@ -201,17 +201,20 @@ def auto_detect_and_parse(content: str, filename: str) -> Tuple[List[Event], int
     Returns (events, skipped, detected_format).
     Raises ValueError if format is unrecognised.
     """
-    # Heuristic: if first non-empty line matches syslog pattern → auth.log
+    checked = 0
     for line in content.splitlines():
-        if not line.strip():
+        line = line.strip()
+        if not line:
             continue
-        if AUTH_SYSLOG_RE.match(line.strip()):
+        checked += 1
+        if AUTH_SYSLOG_RE.match(line):
             evts, skipped = parse_auth_log(content, filename)
             return evts, skipped, "auth"
-        if ACCESS_COMBINED_RE.match(line.strip()):
+        if ACCESS_COMBINED_RE.match(line):
             evts, skipped = parse_access_log(content, filename)
             return evts, skipped, "access"
-        break
+        if checked >= 20:
+            break
 
     raise ValueError(
         f"Unrecognised log format in '{filename}'. "

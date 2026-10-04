@@ -110,8 +110,8 @@ def s3_web_recon_exfil(access_lines: List[str], labels: dict) -> List[str]:
     t = BASE_TIME.replace(hour=14, minute=0)
 
     # gobuster 404 flood (50 requests)
-    paths = [f"/wp-admin/{i}", f"/.git/config", f"/backup{i}.zip",
-             f"/admin{i}", f"/phpinfo.php"] * 10
+    sample_paths = ["/wp-admin", "/.git/config", "/backup.zip", "/admin", "/phpinfo.php"]
+    paths = [f"{p}/{idx}" if idx > 0 else p for idx in range(10) for p in sample_paths]
     for path in paths[:50]:
         t += timedelta(seconds=random.randint(1, 3))
         access_lines.append(
