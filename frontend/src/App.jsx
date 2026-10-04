@@ -6,7 +6,7 @@ import {
   Search, Filter, ExternalLink, Database, Sparkles, Layers,
   Clock, Shield, Eye, Copy, Check, Zap, Flame, Radio,
   Cpu, Lock, Unlock, ArrowUpRight, Home, BarChart2, Settings, BookOpen,
-  Target, GitBranch, Share2, MoreVertical
+  Target, GitBranch, Share2, MoreVertical, X, Sliders, ShieldCheck
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
@@ -212,6 +212,29 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [copiedText, setCopiedText] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [engineConfig, setEngineConfig] = useState(null);
+
+  // Fetch engine configuration thresholds
+  async function fetchConfig() {
+    try {
+      const res = await fetch(`${API_BASE}/config`);
+      if (res.ok) setEngineConfig(await res.json());
+    } catch (e) {
+      console.warn("Could not fetch engine config:", e);
+    }
+  }
+
+  // Dismiss settings on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showSettings) {
+        setShowSettings(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSettings]);
 
   // Simulation controls
   const [selectedScenarios, setSelectedScenarios] = useState({
@@ -861,16 +884,19 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => alert("ChainTrace v1.2.0 Settings: Correlation engine parameters, risk weights, and baseline windows.")}
+                onClick={() => {
+                  fetchConfig();
+                  setShowSettings(true);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
                   padding: '7px 12px',
                   borderRadius: '6px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
+                  background: showSettings ? 'rgba(232, 166, 106, 0.2)' : 'transparent',
+                  border: showSettings ? '1px solid rgba(232, 166, 106, 0.4)' : 'none',
+                  color: showSettings ? '#E8A66A' : 'var(--text-secondary)',
                   fontSize: '0.82rem',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -3036,6 +3062,323 @@ export default function App() {
           <span>Frontend & Simulation: <strong>Mahadev H</strong></span>
         </div>
       </footer>
+
+      {/* ─── SETTINGS MODAL DIALOG ─────────────────────────────────────────── */}
+      {showSettings && (
+        <div 
+          onClick={() => setShowSettings(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(17, 24, 39, 0.65)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '860px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.25)',
+              border: '1px solid var(--border-subtle)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '24px 28px',
+              borderBottom: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: '16px',
+              background: 'linear-gradient(180deg, rgba(254, 247, 240, 0.6) 0%, rgba(255, 255, 255, 1) 100%)'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: '#E8A66A',
+                    background: 'rgba(232, 166, 106, 0.14)',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(232, 166, 106, 0.35)',
+                  }}>
+                    ENGINE PARAMETERS & TUNING
+                  </span>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    color: '#15803D',
+                    background: 'rgba(22, 163, 74, 0.12)',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(22, 163, 74, 0.3)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <CheckCircle2 size={11} />
+                    config.yaml Active
+                  </span>
+                </div>
+                <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#111827', margin: 0 }}>
+                  Detection Engine Settings & Thresholds
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', marginTop: '4px', marginBottom: 0 }}>
+                  Deterministic rule thresholds, baseline modeling windows, and correlation weights calibrated to eliminate false alarms.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowSettings(false)}
+                style={{
+                  background: 'rgba(240, 235, 226, 0.7)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '8px',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0
+                }}
+                title="Close (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Category 1: Brute Force & Credential Access */}
+              <div style={{
+                background: 'rgba(250, 248, 245, 0.8)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '12px',
+                padding: '16px 20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <ShieldAlert size={16} color="#DC2626" />
+                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                    Credential Access & Brute Force Thresholds (R1 – R4)
+                  </h3>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R1: SSH Brute Force</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      ≥ {engineConfig?.thresholds?.r1_threshold ?? 10} failures / {engineConfig?.thresholds?.r1_window_minutes ?? 5} min
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>High Severity · T1110.001</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R2: Password Spraying</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      ≥ {engineConfig?.thresholds?.r2_distinct_users ?? 5} users / {engineConfig?.thresholds?.r2_window_minutes ?? 10} min
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>High Severity · T1110.003</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R3: Low-and-Slow (/24 Subnet)</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      ≥ {engineConfig?.thresholds?.r3_threshold ?? 15} fails / {engineConfig?.thresholds?.r3_window_hours ?? 6} hours
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Typo Grace: {engineConfig?.thresholds?.r3_ignore_typo_minutes ?? 5} min · T1110</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R4: Login After Failures</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#DC2626', marginTop: '2px' }}>
+                      Success after ≥ {engineConfig?.thresholds?.r4_fail_threshold ?? 5} fails
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Lookback: {engineConfig?.thresholds?.r4_lookback_minutes ?? 60} min · T1078</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category 2: Baseline & Behavioral Modeling */}
+              <div style={{
+                background: 'rgba(250, 248, 245, 0.8)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '12px',
+                padding: '16px 20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <Activity size={16} color="#D97706" />
+                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                    Baseline Modeling & Privilege Escalation (R5 – R8)
+                  </h3>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>Baseline Training Window</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      First {((engineConfig?.thresholds?.baseline_fraction ?? 0.25) * 100).toFixed(0)}% of log timespan
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Min user activity floor: {engineConfig?.thresholds?.baseline_min_logins ?? 5} logins</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R5: Off-Hours Login</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      {String(engineConfig?.thresholds?.off_hours_default_start ?? 8).padStart(2, '0')}:00 – {String(engineConfig?.thresholds?.off_hours_default_end ?? 20).padStart(2, '0')}:00
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Active hours; alerts on off-shift access</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R7: Sudo Post-Suspicious Login</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      Within {engineConfig?.thresholds?.r7_window_minutes ?? 60} minutes
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>High Severity · T1548.003</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R8: Account Created / Sudo Added</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#DC2626', marginTop: '2px' }}>
+                      Immediate Trigger
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Critical Severity · T1136.001 / T1098</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category 3: Web Recon & Exfiltration */}
+              <div style={{
+                background: 'rgba(250, 248, 245, 0.8)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '12px',
+                padding: '16px 20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <Target size={16} color="#E8A66A" />
+                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                    Web Scanning & Data Exfiltration (R9 – R11)
+                  </h3>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R9: Web Scanning</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      ≥ {engineConfig?.thresholds?.r9_404_threshold ?? 30} 404s / {engineConfig?.thresholds?.r9_window_minutes ?? 5} min
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Or scanner UA: sqlmap, gobuster, nikto</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R10: Web Attack Payloads</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      URL-Decoded Signatures
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Matches SQLi, XSS, Path Traversal, Cmd Inj</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>R11: Large Data Transfer</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      &gt; 50 MB or &gt; {engineConfig?.thresholds?.r11_median_multiplier ?? 20}× median
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Window: {engineConfig?.thresholds?.r11_window_minutes ?? 10} min (5 MB floor)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category 4: Correlation & Risk Scoring */}
+              <div style={{
+                background: 'rgba(250, 248, 245, 0.8)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '12px',
+                padding: '16px 20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <GitBranch size={16} color="#7C3AED" />
+                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                    Graph Correlation & Risk Scoring Parameters
+                  </h3>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>Graph Window</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      {engineConfig?.thresholds?.correlation_window_hours ?? 2.0} Hours
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Max alert time delta for incident edge</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>Kill-Chain Multiplier</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      1 stg: 1.0× · 2 stg: 1.3× · 3+ stg: 1.6×
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Cap: 100 risk score</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>Rule Repeat Cap</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      {engineConfig?.thresholds?.rule_repeat_cap ?? 2} per entity
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Prevents single rule score flooding</div>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>Incident Risk Floor</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: '#111827', marginTop: '2px' }}>
+                      ≥ {engineConfig?.thresholds?.evaluation_min_incident_risk ?? 30} Points
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Evaluation detection minimum</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 28px',
+              borderTop: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(250, 248, 245, 0.5)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                <ShieldCheck size={14} color="#16A34A" />
+                <span>Deterministic rules calibrated for zero false positives on baseline traffic.</span>
+              </div>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="btn-peach"
+                style={{ padding: '8px 20px', fontSize: '0.84rem' }}
+              >
+                Close Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

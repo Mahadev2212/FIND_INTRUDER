@@ -101,6 +101,13 @@ def health():
     return {"status": "ok", "db": db}
 
 
+@app.get("/api/config")
+def get_config():
+    """Returns engine thresholds and configuration from config.yaml."""
+    from engine.config import CFG
+    return CFG
+
+
 @app.post("/api/analyze")
 async def analyze(files: List[UploadFile] = File(...)):
     """Upload 1+ log files (multipart) and run the analysis pipeline."""
