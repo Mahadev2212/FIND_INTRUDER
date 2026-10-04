@@ -23,6 +23,26 @@ import mockEvaluation from './mocks/evaluation.json';
 // `npm run dev` through the Vite proxy. Set VITE_API_URL only if the API lives on another host.
 const API_BASE = (import.meta.env.VITE_API_URL || '') + '/api';
 
+/* IntruTrace logo: linked chain of nodes – one node turns red (the intruder found in the chain) */
+function ChainNodesLogo({ size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 17 L10 7 L14 15 L19 6" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="5" cy="17" r="2.6" fill="#FFFFFF" />
+      <circle cx="10" cy="7" r="2.6" fill="#FFFFFF" />
+      <circle cx="14" cy="15" r="2.6" fill="#FFFFFF" />
+      <circle cx="19" cy="6" r="3" fill="#7F1D1D" stroke="#FFFFFF" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+/* Analyses created in THIS browser – the history menu shows only these, not everyone's runs */
+const MY_ANALYSES_KEY = 'intrutrace_my_analyses';
+const getMyAnalyses = () => { try { return JSON.parse(localStorage.getItem(MY_ANALYSES_KEY) || '[]'); } catch { return []; } };
+const addMyAnalysis = (id) => {
+  try { localStorage.setItem(MY_ANALYSES_KEY, JSON.stringify([id, ...getMyAnalyses().filter(x => x !== id)].slice(0, 20))); } catch { /* ignore */ }
+};
+
 /* ─── Visual Helper SVG Components (Single Source of Truth Aesthetic) ──────── */
 
 /* Hero Waves SVG — matches reference image exactly: warm orange wave terrain in bottom-right of hero */
@@ -337,7 +357,8 @@ export default function App() {
       const res = await fetch(`${API_BASE}/analyses`);
       if (res.ok) {
         const data = await res.json();
-        setAnalyses(data);
+        const mine = getMyAnalyses();
+        setAnalyses(data.filter(a => mine.includes(a.id)));
         // Only open an analysis the user just created or picked. A fresh page load starts empty
         // (no results appear before the user uploads logs); older analyses stay in the Dataset menu.
         const matched = preferredId ? data.find(a => a.id === preferredId) : null;
@@ -433,10 +454,13 @@ export default function App() {
   // Handle manual dataset selection from dropdown
   async function handleSelectAnalysis(newId) {
     setAnalysisId(newId);
-    localStorage.setItem('chaintrace_analysis_id', newId);
     setSelectedIncidentId(null);
     setIncidentDetail(null);
-    await loadAnalysisData(newId);
+    setSummary(null);
+    setIncidents([]);
+    setEntities([]);
+    setEvaluation(null);
+    if (newId) await loadAnalysisData(newId);
   }
 
   // Handle manual refresh button
@@ -490,7 +514,7 @@ export default function App() {
       }
       
       const resp = await res.json();
-      localStorage.setItem('chaintrace_analysis_id', resp.analysis_id);
+      addMyAnalysis(resp.analysis_id);
       setAnalysisId(resp.analysis_id);
       setSelectedIncidentId(null);
       setIncidentDetail(null);
@@ -532,7 +556,7 @@ export default function App() {
         throw new Error(errData.detail || "Analysis failed");
       }
       const resp = await res.json();
-      localStorage.setItem('chaintrace_analysis_id', resp.analysis_id);
+      addMyAnalysis(resp.analysis_id);
       setAnalysisId(resp.analysis_id);
       setSelectedIncidentId(null);
       setIncidentDetail(null);
@@ -589,13 +613,18 @@ export default function App() {
   const spikeTime = chartData[maxSpikeIndex]?.time || '00:00';
   const spikeCount = chartData[maxSpikeIndex]?.count || 0;
 
+  const currentAnalysis = analyses.find(a => a.id === analysisId);
+  const isSimulation = useMocks || currentAnalysis?.source === 'simulation';
   const navItems = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'incidents', label: 'Incidents', icon: ShieldAlert, count: incidents?.length },
     { id: 'entities', label: 'Entities', icon: Users, count: entities?.length },
-    { id: 'evaluation', label: 'Evaluation', icon: CheckCircle2 },
-    { id: 'upload', label: 'Simulate & Ingest', icon: Play },
+    ...(isSimulation ? [{ id: 'evaluation', label: 'Evaluation', icon: CheckCircle2 }] : []),
+    { id: 'upload', label: 'Analyze Logs', icon: Play },
   ];
+  useEffect(() => {
+    if (activeTab === 'evaluation' && !isSimulation) setActiveTab('overview');
+  }, [activeTab, isSimulation]);
 
   return (
     <div style={{
@@ -641,11 +670,11 @@ export default function App() {
               color: '#FFFFFF',
               boxShadow: '0 4px 12px rgba(255, 102, 34, 0.3)',
             }}>
-              <ShieldAlert size={20} strokeWidth={2.4} />
+              <ChainNodesLogo size={22} />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.02em', color: '#111827', lineHeight: 1.1 }}>
-                ChainTrace
+                IntruTrace
               </div>
               <div style={{ fontSize: '0.64rem', color: '#EA580C', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 ALG-CYBER-01 • THREAT OPS
@@ -705,7 +734,7 @@ export default function App() {
           }}>
             <Database size={13} color="#EA580C" />
             <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-              Dataset:
+              History:
             </span>
             <select
               value={analysisId}
@@ -721,9 +750,12 @@ export default function App() {
                 fontWeight: 600,
               }}
             >
+              <option value="" style={{ background: '#ffffff', color: '#6B7280' }}>
+                {analyses.length ? '— Your previous analyses —' : 'No analyses yet'}
+              </option>
               {analyses.map(a => (
                 <option key={a.id} value={a.id} style={{ background: '#ffffff', color: '#111827' }}>
-                  {a.id.slice(0, 8)}... ({a.source === 'simulation' ? 'Sim' : 'Upload'} · {a.stats?.events ?? 0} evts · {a.stats?.incidents ?? 0} inc)
+                  {a.source === 'simulation' ? 'Demo simulation' : (a.files || []).join(', ') || 'Upload'} · {(a.stats?.lines_total ?? 0).toLocaleString()} lines · {a.stats?.incidents ?? 0} incident(s) · {a.created_at ? new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </option>
               ))}
             </select>
@@ -3057,7 +3089,7 @@ export default function App() {
         fontSize: '0.72rem',
         color: 'var(--text-muted)',
       }}>
-        <div>ChainTrace v1.2.0 · ALGOTHON'26 · Problem Statement ALG-CYBER-01</div>
+        <div>IntruTrace v1.2.0 · ALGOTHON'26 · Problem Statement ALG-CYBER-01</div>
       </footer>
 
 
@@ -3076,7 +3108,7 @@ export default function App() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <BookOpen size={20} color="#EA580C" /> How to use ChainTrace
+                <BookOpen size={20} color="#EA580C" /> How to use IntruTrace
               </h2>
               <button onClick={() => setShowDocs(false)} className="btn-peach" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>Close</button>
             </div>

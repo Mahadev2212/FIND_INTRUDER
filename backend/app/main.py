@@ -1,5 +1,5 @@
 """
-ChainTrace – FastAPI Application
+IntruTrace – FastAPI Application
 Serves REST API endpoints and the React frontend build (one service, one URL).
 Run: cd backend && uvicorn app.main:app --reload --port 8000
 Owner: Bhanu Prasad
@@ -23,7 +23,7 @@ from engine.parsers import decode_upload
 from engine.pipeline import run_analysis, simulate as run_simulation
 from engine.report import incident_markdown
 
-log = logging.getLogger("chaintrace")
+log = logging.getLogger("intrutrace")
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
@@ -32,7 +32,7 @@ store = make_store()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    log.warning("ChainTrace storage: %s", store.kind)
+    log.warning("IntruTrace storage: %s", store.kind)
     if store.kind == "postgres":
         try:
             store.ensure_schema()  # schema.sql is idempotent (IF NOT EXISTS)
@@ -49,7 +49,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="ChainTrace", version="1.2.0", lifespan=lifespan)
+app = FastAPI(title="IntruTrace", version="1.2.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -182,7 +182,7 @@ def get_incident_report(analysis_id: str, incident_id: str, format: str = Query(
     _valid_id(analysis_id)
     _found(_read(store.exists, analysis_id) or None)
     detail = _found(_read(store.incident_detail, analysis_id, incident_id), "Incident")
-    filename = f"chaintrace-{incident_id}"
+    filename = f"intrutrace-{incident_id}"
     if format == "json":
         return JSONResponse(detail, headers={"Content-Disposition": f'attachment; filename="{filename}.json"'})
     return Response(incident_markdown(analysis_id, detail), media_type="text/markdown; charset=utf-8",

@@ -1,5 +1,5 @@
 """
-ChainTrace – incident report export tests (P2).
+IntruTrace – incident report export tests (P2).
 Owner: Bhanu Prasad
 """
 
@@ -23,7 +23,7 @@ def test_markdown_report_has_story_and_evidence(setup):
     r = c.get(f"/api/analyses/{aid}/incidents/inc-1/report")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/markdown")
-    assert 'filename="chaintrace-inc-1.md"' in r.headers["content-disposition"]
+    assert 'filename="intrutrace-inc-1.md"' in r.headers["content-disposition"]
     md = r.text
     assert md.startswith("# Incident inc-1: SSH compromise with persistence")
     assert "## Attack story" in md and "## Recommended response" in md
@@ -35,7 +35,7 @@ def test_markdown_report_has_story_and_evidence(setup):
 def test_json_report_matches_incident_detail(setup):
     c, aid = setup
     r = c.get(f"/api/analyses/{aid}/incidents/inc-2/report?format=json")
-    assert r.status_code == 200 and "chaintrace-inc-2.json" in r.headers["content-disposition"]
+    assert r.status_code == 200 and "intrutrace-inc-2.json" in r.headers["content-disposition"]
     assert r.json() == c.get(f"/api/analyses/{aid}/incidents/inc-2").json()
 
 

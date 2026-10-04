@@ -1,5 +1,5 @@
 /**
- * ChainTrace – API client.
+ * IntruTrace – API client.
  * Set USE_MOCKS = true to use mock JSON during development (before H7 integration).
  * Flip to false when connecting to real backend.
  * Owner: Mahadev H
