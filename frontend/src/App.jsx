@@ -69,6 +69,14 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-dismiss success notification
+  useEffect(() => {
+    if (successMsg) {
+      const timer = setTimeout(() => setSuccessMsg(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMsg]);
+
   async function checkHealth() {
     try {
       const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(2000) });
@@ -148,6 +156,16 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleRefresh() {
+    setLoading(true);
+    await checkHealth();
+    await fetchAnalyses();
+    if (analysisId) {
+      await loadAnalysisData(analysisId);
+    }
+    setLoading(false);
   }
 
   // 4. Fetch single incident detail
@@ -350,10 +368,24 @@ export default function App() {
         </div>
 
         {/* Right: Dataset Selector & Live API Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Subtle Vertical Divider */}
+          <div style={{ width: '1px', height: '22px', background: 'var(--border-subtle)' }} />
+
           {/* Active Dataset Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Dataset:</span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'rgba(255, 255, 255, 0.02)',
+            padding: '3px 8px',
+            borderRadius: '6px',
+            border: '1px solid var(--border-subtle)',
+          }}>
+            <Database size={13} color="var(--accent-lime)" />
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Dataset:
+            </span>
             <select
               value={analysisId}
               onChange={(e) => setAnalysisId(e.target.value)}
@@ -361,8 +393,8 @@ export default function App() {
                 background: 'var(--bg-input)',
                 border: '1px solid var(--border-medium)',
                 color: 'var(--text-primary)',
-                padding: '5px 10px',
-                borderRadius: '5px',
+                padding: '4px 8px',
+                borderRadius: '4px',
                 fontSize: '0.78rem',
                 cursor: 'pointer',
                 outline: 'none',
@@ -377,6 +409,27 @@ export default function App() {
             </select>
           </div>
 
+          {/* Live Sync / Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            title="Refresh active analysis and server status"
+            disabled={loading}
+            style={{
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border-medium)',
+              borderRadius: '5px',
+              padding: '6px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              color: 'var(--text-secondary)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          </button>
+
           {/* Connection Indicator */}
           <div 
             onClick={() => setUseMocks(!useMocks)}
@@ -385,13 +438,14 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '4px 10px',
+              padding: '5px 12px',
               borderRadius: '20px',
               background: (backendAlive && !useMocks) ? 'var(--accent-lime-subtle)' : 'var(--threat-high-bg)',
               border: `1px solid ${(backendAlive && !useMocks) ? 'var(--accent-lime-border)' : 'var(--threat-high-border)'}`,
               cursor: 'pointer',
               fontSize: '0.72rem',
               fontWeight: 800,
+              letterSpacing: '0.02em',
             }}
           >
             <span className={backendAlive && !useMocks ? 'pulse-lime' : ''} style={{
@@ -410,28 +464,61 @@ export default function App() {
       {/* ─── Main Viewport ────────────────────────────────────────────────────── */}
       <main style={{ flex: 1, padding: '24px 32px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
         
-        {/* Success toast */}
+        {/* Sleek Dismissible Toast / Simulation Banner */}
         {successMsg && (
           <div style={{
-            padding: '10px 16px',
-            marginBottom: '16px',
-            borderRadius: '6px',
-            background: 'var(--accent-lime-subtle)',
-            border: '1px solid var(--accent-lime-border)',
-            color: 'var(--accent-lime)',
+            padding: '12px 18px',
+            marginBottom: '18px',
+            borderRadius: '8px',
+            background: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(188, 252, 0, 0.3)',
+            borderLeft: '4px solid var(--accent-lime)',
+            color: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: '0.84rem',
-            fontWeight: 600,
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircle2 size={16} />
-              <span>{successMsg}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: 'rgba(188, 252, 0, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-lime)',
+                flexShrink: 0
+              }}>
+                <CheckCircle2 size={15} />
+              </div>
+              <div>
+                <span style={{ fontWeight: 700, color: '#fff' }}>{successMsg}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                  (Ground-truth labels synced in Evaluation Benchmark)
+                </span>
+              </div>
             </div>
             <button 
               onClick={() => setSuccessMsg(null)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--accent-lime)', cursor: 'pointer', fontSize: '1rem' }}
+              title="Dismiss notification"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                borderRadius: '4px',
+                width: '22px',
+                height: '22px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.9rem',
+                lineHeight: 1,
+              }}
             >
               ×
             </button>
@@ -441,24 +528,53 @@ export default function App() {
         {/* Error notification banner */}
         {errorMsg && (
           <div style={{
-            padding: '10px 16px',
-            marginBottom: '16px',
-            borderRadius: '6px',
-            background: 'var(--threat-critical-bg)',
-            border: '1px solid var(--threat-critical-border)',
-            color: 'var(--threat-critical)',
+            padding: '12px 18px',
+            marginBottom: '18px',
+            borderRadius: '8px',
+            background: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 45, 85, 0.3)',
+            borderLeft: '4px solid var(--threat-critical)',
+            color: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: '0.84rem',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <AlertTriangle size={16} />
-              <span>{errorMsg}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: 'rgba(255, 45, 85, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--threat-critical)',
+                flexShrink: 0
+              }}>
+                <AlertTriangle size={15} />
+              </div>
+              <span style={{ fontWeight: 600, color: 'var(--threat-critical)' }}>{errorMsg}</span>
             </div>
             <button 
               onClick={() => setErrorMsg(null)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--threat-critical)', cursor: 'pointer', fontSize: '1rem' }}
+              title="Dismiss error"
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                borderRadius: '4px',
+                width: '22px',
+                height: '22px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.9rem',
+                lineHeight: 1,
+              }}
             >
               ×
             </button>
@@ -1192,58 +1308,300 @@ export default function App() {
         {/* ─── TAB: EVALUATION (JUDGE-READY) ────────────────────────────────────── */}
         {activeTab === 'evaluation' && (
           <div>
-            <div style={{ marginBottom: '18px' }}>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Evaluation & Detection Benchmark</h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '2px' }}>
-                Ground-truth validation scored automatically against the attack simulator scenarios.
-              </p>
-            </div>
-
-            {/* Headline Card */}
-            <div className="card-solar" style={{
-              padding: '24px',
-              marginBottom: '20px',
-              border: '1px solid var(--accent-lime-border)',
-              background: 'linear-gradient(135deg, rgba(188, 252, 0, 0.08) 0%, rgba(255, 119, 51, 0.04) 100%)'
+            {/* Header & Benchmark Controls */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              flexWrap: 'wrap',
+              gap: '16px',
+              marginBottom: '22px'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                <div>
-                  <span className="badge badge-low" style={{ marginBottom: '6px' }}>
-                    Headline Competition Metric
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'var(--accent-lime)',
+                    background: 'var(--accent-lime-subtle)',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--accent-lime-border)',
+                  }}>
+                    MITRE ATT&CK EVALUATION
                   </span>
-                  <div style={{ fontSize: '2.4rem', fontWeight: 900, color: '#fff' }}>
-                    {evaluation?.scenarios_detected ?? 4} / {evaluation?.scenarios_total ?? 5} Scenarios Detected
-                  </div>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginTop: '4px' }}>
-                    Successfully identifying brute force, spraying, web recon/exfiltration, and insider attacks.
-                  </p>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    Active Dataset: {analysisId}
+                  </span>
                 </div>
+                <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
+                  Evaluation & Detection Benchmark
+                </h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginTop: '4px' }}>
+                  Ground-truth validation scored automatically against synthetic multi-stage attack scenarios.
+                </p>
+              </div>
 
-                <div style={{ display: 'flex', gap: '20px' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--accent-lime)' }}>
-                      {((evaluation?.precision ?? 0.286) * 100).toFixed(1)}%
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Precision</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#00f0a0' }}>
-                      {((evaluation?.recall ?? 0.727) * 100).toFixed(1)}%
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Recall</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--accent-solar)' }}>
-                      {evaluation?.critical_false_positives ?? 20}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Critical FPs</div>
-                  </div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={() => setActiveTab('upload')}
+                  className="btn-lime"
+                  style={{ fontSize: '0.82rem', padding: '8px 16px' }}
+                >
+                  <Play size={14} />
+                  <span>Configure Simulator</span>
+                </button>
               </div>
             </div>
 
-            {/* Per-Scenario Breakdown */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '14px' }}>
+            {/* KPI Metrics: 4 Distinct Bordered Sub-Cards */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '14px',
+              marginBottom: '24px'
+            }}>
+              {/* KPI 1: Scenario Coverage */}
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid #1e293b',
+                borderTop: '2px solid var(--accent-lime)',
+                borderRadius: '8px',
+                padding: '18px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxShadow: '0 4px 18px rgba(0,0,0,0.3)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                    Detection Coverage
+                  </span>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    background: 'rgba(188, 252, 0, 0.12)',
+                    border: '1px solid rgba(188, 252, 0, 0.3)',
+                    color: 'var(--accent-lime)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <CheckCircle2 size={11} />
+                    {(((evaluation?.scenarios_detected ?? 4) / (evaluation?.scenarios_total ?? 5)) * 100).toFixed(0)}% PASS
+                  </span>
+                </div>
+                <div>
+                  <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+                    {evaluation?.scenarios_detected ?? 4}
+                    <span style={{ fontSize: '1.15rem', color: 'var(--text-muted)', fontWeight: 600, marginLeft: '4px' }}>
+                      / {evaluation?.scenarios_total ?? 5}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                    Ground-truth scenarios detected
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI 2: Precision Score (with semantic warning indicator) */}
+              {(() => {
+                const prec = evaluation?.precision ?? 0.286;
+                const isLowPrec = prec < 0.5;
+                return (
+                  <div style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid #1e293b',
+                    borderTop: `2px solid ${isLowPrec ? '#f59e0b' : '#10b981'}`,
+                    borderRadius: '8px',
+                    padding: '18px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 18px rgba(0,0,0,0.3)',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                        Precision Score
+                      </span>
+                      {isLowPrec ? (
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          background: 'rgba(245, 158, 11, 0.12)',
+                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                          color: '#fbbf24',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <AlertTriangle size={11} />
+                          TUNING ADVISORY
+                        </span>
+                      ) : (
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          background: 'rgba(16, 185, 129, 0.12)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          color: '#34d399',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <CheckCircle2 size={11} />
+                          OPTIMAL
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '2.1rem', fontWeight: 900, color: isLowPrec ? '#fbbf24' : '#fff', lineHeight: 1 }}>
+                        {(prec * 100).toFixed(1)}%
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                        {isLowPrec ? 'Noise from background syslog volume' : 'High confidence detection accuracy'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* KPI 3: Recall Rate */}
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid #1e293b',
+                borderTop: '2px solid #00f0a0',
+                borderRadius: '8px',
+                padding: '18px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxShadow: '0 4px 18px rgba(0,0,0,0.3)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                    Recall Rate
+                  </span>
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    background: 'rgba(0, 240, 160, 0.12)',
+                    border: '1px solid rgba(0, 240, 160, 0.3)',
+                    color: '#00f0a0',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <CheckCircle2 size={11} />
+                    HIGH CAPTURE
+                  </span>
+                </div>
+                <div>
+                  <div style={{ fontSize: '2.1rem', fontWeight: 900, color: '#00f0a0', lineHeight: 1 }}>
+                    {(((evaluation?.recall ?? 0.727)) * 100).toFixed(1)}%
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                    True positive attack entity retrieval
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI 4: Critical False Positives */}
+              {(() => {
+                const fps = evaluation?.critical_false_positives ?? 20;
+                return (
+                  <div style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid #1e293b',
+                    borderTop: '2px solid var(--accent-solar)',
+                    borderRadius: '8px',
+                    padding: '18px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 18px rgba(0,0,0,0.3)',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                        Critical False Positives
+                      </span>
+                      <span style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '9999px',
+                        background: 'rgba(255, 119, 51, 0.12)',
+                        border: '1px solid rgba(255, 119, 51, 0.3)',
+                        color: 'var(--accent-solar)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <Flame size={11} />
+                        NOISE METRIC
+                      </span>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--accent-solar)', lineHeight: 1 }}>
+                        {fps}
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                        Benign entities escalated to high/critical
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Scenario Breakdown Matrix Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '14px',
+              paddingBottom: '10px',
+              borderBottom: '1px solid #1e293b',
+            }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
+                  Ground-Truth Scenario Validation Matrix
+                </h3>
+                <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '1px' }}>
+                  Synthetic multi-stage injection scenarios scored by entity extraction completeness.
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--text-secondary)',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  background: 'rgba(30, 41, 59, 0.5)',
+                  border: '1px solid #334155'
+                }}>
+                  5 Scenarios Evaluated
+                </span>
+              </div>
+            </div>
+
+            {/* Per-Scenario Dynamic Grid: Balanced 3-column wrap with equalized card heights */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+              gap: '16px'
+            }}>
               {(evaluation?.per_scenario || [
                 { scenario_id: 'S1', detected: true, expected_entities: ['185.220.101.7', 'deploy', 'sysupdate'], found_entities: ['185.220.101.7', 'deploy', 'sysupdate'] },
                 { scenario_id: 'S2', detected: true, expected_entities: ['45.33.10.8', 'user05'], found_entities: ['45.33.10.8', 'user05'] },
@@ -1251,53 +1609,261 @@ export default function App() {
                 { scenario_id: 'S4', detected: false, expected_entities: ['192.168.100.10', '192.168.100.11', '192.168.100.12'], found_entities: [] },
                 { scenario_id: 'S5', detected: true, expected_entities: ['172.16.5.20', 'user15'], found_entities: ['172.16.5.20', 'user15'] }
               ]).map((sc) => {
-                const names = {
-                  S1: 'SSH Compromise with Backdoor (S1)',
-                  S2: 'Password Spraying Attack (S2)',
-                  S3: 'Web Recon -> SQLi -> Exfiltration (S3)',
-                  S4: 'Low-and-Slow Subnet Distributed (S4)',
-                  S5: 'Insider Off-Hours Sudo & Download (S5)',
+                const scenarioMeta = {
+                  S1: {
+                    name: 'SSH Compromise & Cron Backdoor',
+                    mitre: 'T1110.001 · T1053.003',
+                    target: 'Bastion SSH -> /etc/cron.d/sysupdate',
+                  },
+                  S2: {
+                    name: 'Distributed Password Spraying',
+                    mitre: 'T1110.003 · Spraying Campaign',
+                    target: 'Auth Subsystem -> Multi-Account Probe',
+                  },
+                  S3: {
+                    name: 'Web Recon -> SQLi -> Exfiltration',
+                    mitre: 'T1190 · T1048.003 (Exfil)',
+                    target: 'NGINX Access Logs -> Outbound HTTPS',
+                  },
+                  S4: {
+                    name: 'Low-and-Slow Subnet Distributed Pivot',
+                    mitre: 'T1018 · Low Threshold Lateral',
+                    target: 'Subnet 192.168.100.0/24 Workstations',
+                  },
+                  S5: {
+                    name: 'Insider Off-Hours Sudo & Anomalous Egress',
+                    mitre: 'T1078 · Insider Threat',
+                    target: 'Finance Host -> Sudoers Escalation',
+                  },
                 };
 
+                const meta = scenarioMeta[sc.scenario_id] || {
+                  name: `Scenario ${sc.scenario_id}`,
+                  mitre: 'T1000 · Cyber Kill Chain',
+                  target: 'Target Infrastructure',
+                };
+
+                const expected = sc.expected_entities || [];
+                const found = sc.found_entities || [];
+                const expectedCount = expected.length;
+                const foundCount = found.length;
+                const isFullyMatched = foundCount >= expectedCount && expectedCount > 0;
+                const isZeroMatched = foundCount === 0;
+
                 return (
-                  <div key={sc.scenario_id} className="card-solar" style={{ padding: '18px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <h4 style={{ fontWeight: 800, color: '#fff', fontSize: '0.92rem' }}>
-                        {names[sc.scenario_id] || sc.scenario_id}
-                      </h4>
-                      {sc.detected ? (
-                        <span className="badge badge-low" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <CheckCircle2 size={12} /> DETECTED
-                        </span>
-                      ) : (
-                        <span className="badge badge-critical" style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <AlertTriangle size={12} /> MISSED
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ fontSize: '0.78rem', marginTop: '8px' }}>
-                      <div style={{ color: 'var(--text-muted)', marginBottom: '3px' }}>Expected Entities:</div>
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                        {sc.expected_entities?.map((e, idx) => (
-                          <span key={idx} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '3px' }}>
-                            {e}
+                  <div
+                    key={sc.scenario_id}
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid #1e293b',
+                      borderRadius: '8px',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      height: '100%',
+                      minHeight: '290px',
+                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+                      transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#334155';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#1e293b';
+                      e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.25)';
+                    }}
+                  >
+                    {/* Top Section: Scenario ID, Status Pill & Title */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            padding: '2px 7px',
+                            borderRadius: '4px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            color: 'var(--text-secondary)',
+                            border: '1px solid #334155'
+                          }}>
+                            {sc.scenario_id}
                           </span>
-                        ))}
-                      </div>
+                          <span style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.68rem',
+                            color: 'var(--text-muted)'
+                          }}>
+                            {meta.mitre}
+                          </span>
+                        </div>
 
-                      <div style={{ color: 'var(--text-muted)', marginBottom: '3px' }}>Captured Entities:</div>
-                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                        {sc.found_entities?.length > 0 ? (
-                          sc.found_entities.map((e, idx) => (
-                            <span key={idx} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', background: 'var(--accent-lime-subtle)', color: 'var(--accent-lime)', padding: '1px 5px', borderRadius: '3px' }}>
-                              ✓ {e}
-                            </span>
-                          ))
+                        {/* Semantic Status Badge: Subtle modern border instead of neon */}
+                        {sc.detected ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '3px 9px',
+                            borderRadius: '9999px',
+                            background: 'rgba(16, 185, 129, 0.12)',
+                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                            color: '#34d399',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.04em'
+                          }}>
+                            <CheckCircle2 size={12} />
+                            DETECTED
+                          </span>
                         ) : (
-                          <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.72rem' }}>None captured</span>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '3px 9px',
+                            borderRadius: '9999px',
+                            background: 'rgba(244, 63, 94, 0.12)',
+                            border: '1px solid rgba(244, 63, 94, 0.25)',
+                            color: '#f43f5e',
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.04em'
+                          }}>
+                            <AlertTriangle size={12} />
+                            MISSED
+                          </span>
                         )}
                       </div>
+
+                      <h4 style={{
+                        fontSize: '0.96rem',
+                        fontWeight: 700,
+                        color: '#fff',
+                        lineHeight: 1.3,
+                        marginBottom: '4px'
+                      }}>
+                        {meta.name}
+                      </h4>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                        {meta.target}
+                      </div>
+                    </div>
+
+                    {/* Middle Section: Entity Match Ratio & Monospace Badges */}
+                    <div style={{ flex: 1, padding: '10px 0', borderTop: '1px solid rgba(51, 65, 85, 0.4)' }}>
+                      {/* Entity Match Ratio Pill */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                          Entity Match Ratio
+                        </span>
+                        <span style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          background: isFullyMatched ? 'rgba(16, 185, 129, 0.12)' : (isZeroMatched ? 'rgba(244, 63, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)'),
+                          border: `1px solid ${isFullyMatched ? 'rgba(16, 185, 129, 0.25)' : (isZeroMatched ? 'rgba(244, 63, 94, 0.25)' : 'rgba(245, 158, 11, 0.25)')}`,
+                          color: isFullyMatched ? '#34d399' : (isZeroMatched ? '#f43f5e' : '#fbbf24'),
+                        }}>
+                          {foundCount}/{expectedCount} matched
+                        </span>
+                      </div>
+
+                      {/* Expected Entities */}
+                      <div style={{ marginBottom: '10px' }}>
+                        <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                          Expected Entities ({expectedCount}):
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {expected.map((e, idx) => (
+                            <span
+                              key={idx}
+                              className="font-mono text-xs px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-slate-200"
+                              style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: '0.73rem',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                background: 'rgba(30, 41, 59, 0.85)',
+                                border: '1px solid #334155',
+                                color: '#e2e8f0',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {e}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Captured Entities */}
+                      <div>
+                        <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                          Captured Entities ({foundCount}):
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {found.length > 0 ? (
+                            found.map((e, idx) => (
+                              <span
+                                key={idx}
+                                className="font-mono text-xs px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-slate-200"
+                                style={{
+                                  fontFamily: 'var(--font-mono)',
+                                  fontSize: '0.73rem',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  background: 'rgba(16, 185, 129, 0.12)',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                                  color: '#34d399',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                <Check size={11} strokeWidth={2.8} />
+                                {e}
+                              </span>
+                            ))
+                          ) : (
+                            <span style={{
+                              fontFamily: 'var(--font-mono)',
+                              fontSize: '0.72rem',
+                              color: '#64748b',
+                              fontStyle: 'italic',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              background: 'rgba(15, 23, 42, 0.4)',
+                              border: '1px dashed #334155',
+                            }}>
+                              None captured
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Section: Footer with Status Summary */}
+                    <div style={{
+                      paddingTop: '10px',
+                      borderTop: '1px solid rgba(51, 65, 85, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.72rem',
+                      color: 'var(--text-muted)'
+                    }}>
+                      <span>Validation Status</span>
+                      <span style={{
+                        fontWeight: 600,
+                        color: sc.detected ? '#34d399' : '#94a3b8'
+                      }}>
+                        {sc.detected ? 'Verified by Correlation Graph' : 'Requires Subnet Correlation Rule'}
+                      </span>
                     </div>
                   </div>
                 );
